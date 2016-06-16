@@ -3,7 +3,7 @@
 DC=$(date +%y%m%d%H%M)
 SEQ=35
 PKG=bolodsp
-PACKAGES=../../PACKAGES
+PACKAGES=../../PACKAGES.OPT
 
 rm -Rf opkg/*
 mkdir -p opkg release
