@@ -28,9 +28,8 @@ while [ $ncr -gt 0 ]; do
 	# update to effective number of channels
 	let encx="$ncx*$NCM"
 	echo "Allocating site $site ncx=$ncx encx=$encx"
-	rm /etc/acq400/$site/active_chan
 	echo $encx > /etc/acq400/$site/NCHAN
-	echo active_chan=$encx > /etc/acq400/$site/active_chan
+	echo $encx > /etc/acq400/$site/active_chan
 	# site 1 must be set to !data32 to feed 16 bit data to DSP
 	# but EPICS must be set for LONGS to plot the 32 bit data from
 	# DSP, so fake it
