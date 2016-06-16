@@ -1,0 +1,77 @@
+#!/bin/sh
+MDIR=/usr/local/lib/modules
+/sbin/insmod $MDIR/debugfs2.ko
+/sbin/insmod $MDIR/regfs.ko
+/sbin/insmod $MDIR/acq400_dspfs.ko
+ln -s /sys/kernel/debug/dsp1/ /dev/dsp1
+
+cat /usr/local/CARE/BOLO/bolo8dsp-regdef >/dev/dsp1/.create
+mkdir /etc/acq400/14/
+ln -s /dev/dsp1/* /etc/acq400/14/
+#ln -s /usr/local/bin/*lia* /etc/acq400/14/
+grep dsp /proc/devices | /usr/local/CARE/BOLO/build_dsp_nodes
+ls -l /dev/dsp1.*
+
+# MODULE ENABLE
+#ln -s /usr/local/CARE/hanning-float.bin /dev/shm/window
+#set.lia.enable 1
+
+echo "DSP sites 14, 15 active on 4224, 4225"
+
+# IS_LIA=$(cat /dev/dsp1/@MODULE_ID.MT)
+# if [ $IS_LIA != 98 ]; then
+# 	echo WARNING: LIA not found
+# 	exit 1
+# fi
+
+# LIA_TYPE=$(cat /dev/dsp1/@MODULE_ID.LIA_TYPE)
+# NREF=$(cat /dev/dsp1/@NUM_REF)
+# NCM=$NREF
+# NCHAN=$(cat /dev/dsp1/@NUM_CH)
+# let NC="$NREF*$NCHAN"
+
+# case $LIA_TYPE in
+# 11|12)
+# 	let NC="$NC*2"
+# 	let NCM="$NCM*2"
+# 	echo FOUND COMPLEX LIA, NREF=$NREF EFFECTIVE CHAN $NC;;
+# *)
+# 	echo FOUND REAL_LIA, NREF=$NREF, EFFECTIVE CHAN $NC;;
+# esac
+
+NCHAN=24
+NDATAPERCHAN=3
+let NC="$NDATAPERCHAN*$NCHAN"
+NCM=3 # Number of output channels per physical channel
+
+let ncr=$NCHAN
+let site=1
+while [ $ncr -gt 0 ]; do
+	let ncx=$(cat /etc/acq400/$site/NCHAN)
+	# update to effective number of channels
+	let encx="$ncx*$NCM"
+	echo "Allocating site $site ncx=$ncx encx=$encx"
+	rm /etc/acq400/$site/active_chan
+	echo $encx > /etc/acq400/$site/NCHAN
+	echo $encx > /etc/acq400/$site/active_chan
+	# site 1 must be set to !data32 to feed 16 bit data to DSP
+	# but EPICS must be set for LONGS to plot the 32 bit data from
+	# DSP, so fake it
+	rm /etc/acq400/$site/data32
+	echo 1 >/etc/acq400/$site/data32
+
+	let ncr=$ncr-$ncx
+	let site=site+1
+done
+
+TI=/mnt/local/sysconfig/transient.init
+GOOD="COOKED=0 NSAMPLES=100000 NCHAN=$NC TYPE=LONG"
+grep -q "^$GOOD" $TI
+[ $? -eq 0 ] || (
+	sed -ie '/COOKED/d' $TI
+	sed -ie "1i$GOOD" $TI
+)
+/usr/local/init/acq400_knobs.init start
+
+/usr/local/bin/monitor_dsp1 2>&1 >/dev/null  &
+

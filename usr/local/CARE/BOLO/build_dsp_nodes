@@ -1,0 +1,23 @@
+#!/bin/sh
+
+do_build_nodes() 
+{
+        finit=0                                                              
+        while [ $finit -eq 0 ]; do                                           
+                read M_DEV
+                if [ "$M_DEV" = "" ]; then
+                        finit=1;                                             
+                else                                                         
+                        MAJOR=${M_DEV% *}                                    
+                        NAME=${M_DEV#* }                                     
+                        ID=${M_DEV%dsp*}       
+
+			for minor in $(seq 0 4)
+			do
+				mknod /dev/$NAME.$minor c $MAJOR $minor
+			done
+		fi
+	done
+}
+
+do_build_nodes

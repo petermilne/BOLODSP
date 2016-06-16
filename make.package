@@ -1,0 +1,18 @@
+#!/bin/bash
+# SOS : simple one shot
+DC=$(date +%y%m%d%H%M)
+SEQ=35
+PKG=bolodsp
+PACKAGES=../../PACKAGES
+
+rm -Rf opkg/*
+mkdir -p opkg release
+
+cp -a usr opkg
+
+
+tar cvzf release/${SEQ}-${PKG}-${DC}.tgz -C opkg .
+ls -l release/${SEQ}-${PKG}-${DC}.tgz
+rm -f ${PACKAGES}/${SEQ}-${PKG}*
+cp release/${SEQ}-${PKG}-${DC}.tgz ${PACKAGES}
+
