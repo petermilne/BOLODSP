@@ -1,0 +1,34 @@
+#cp /usr/local/CARE/acq400_streamd.0.conf-soft_trigger /etc/sysconfig/acq400_streamd.0.conf                         
+
+# bolo8 in site 1 setup                                                                                            
+#cat /usr/local/awgdata/sin_Fs1000_Fw20.dat >/dev/acq400.1.awg                                                      
+#cat /usr/local/awgdata/sin_Fs1000_Fw20.dat >/dev/acq400.2.awg
+#cat /usr/local/awgdata/sin_Fs1000_Fw20.dat >/dev/acq400.3.awg
+#cat /usr/local/awgdata/sin_Fs1000_Fw20.dat >/dev/acq400.4.awg
+set.site 1 trg=1,1,1
+
+# Set up the DSP
+#/usr/local/init/bolodsp.init
+echo 26842 > /dev/dsp1/STEP_SIZE # 20kHz with 100MHz clock
+echo 1 | tee /dev/bolo8/*/DAC_RANGE # 40Vpp output
+
+# Set up BOLOs to use sideport mode, and enable the DACs
+map /mnt/local/acq2106.map
+mm $sc+0x40 0x00ff0000
+mm $s1+0x204 0x94
+mm $s2+0x204 0x94
+mm $s3+0x204 0x94
+mm $s4+0x204 0x94
+
+# Turn all the gains up to 1V25, since bolometer signals are always small
+echo 1 | tee /dev/bolo8/*/ADC_*_A* > /dev/null
+
+set.site 1 clkdiv=100
+#run0 1 # 8 channels for now...
+
+set.sys /sys/module/acq420fmc/parameters/FIFERR 0                                                                  
+                                                                                                                   
+#/usr/local/bin/streamtonowhered start                                                                              
+
+# acq400ioc causes CPU hangs, making the system unusable. Kill it
+#killall acq400ioc
