@@ -47,6 +47,12 @@ grep -q "^$GOOD" $TI
 	sed -ie '/COOKED/d' $TI
 	sed -ie "1i$GOOD" $TI
 )
+# Add additional knobs not directly connected to registers
+/usr/local/CARE/BOLO/make_bolodsp_knobs
+
+# Set up AO to use sideport
+/bin/sh /usr/local/CARE/BOLO/bolodsp.init
+
 /usr/local/init/acq400_knobs.init start
 
 /usr/local/bin/monitor_dsp1 2>&1 >/dev/null  &
