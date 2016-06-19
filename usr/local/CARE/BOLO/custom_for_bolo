@@ -1,0 +1,4 @@
+mv /mnt/packages.opt/35-bolodsp-*.tgz /mnt/packages
+mv /mnt/packages.opt/99-custom_bolo*.tgz /mnt/packages
+mv /mnt/packages.opt/98-awg-*.tgz /mnt/packages
+mv /mnt/packages.opt/07-bash-*.tgz /mnt/packages
