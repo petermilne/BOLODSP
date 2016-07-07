@@ -15,8 +15,10 @@ ls -l /dev/dsp1.*
 
 echo "DSP sites 14, 15 active on 4234, 4235"
 
-
-NCHAN=24
+# There will be one directory per active BOLO8 in /dev/bolo8.
+# Each site has 8 physical channels
+N_ACTIVE_SITES=$(find /dev/bolo8 -mindepth 1 -type d | wc -l)
+let NCHAN="$N_ACTIVE_SITES*8"
 NDATAPERCHAN=3
 let NC="$NDATAPERCHAN*$NCHAN"
 NCM=3 # Number of output channels per physical channel
