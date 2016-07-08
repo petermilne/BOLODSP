@@ -26,7 +26,7 @@ echo 0 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
 
 # Correct operation of the calibration procedure requires
 # that the main DAC is set to 40Vpp output
-echo 1 | tee /dev/bolo8/*/DAC_RANGE # 40Vpp output
+echo 1 | tee /dev/bolo8/*/DAC_RANGE > /dev/null # 40Vpp output
 # Correct operation of the DSP procedure does not require
 # particular gain settings. Postpone these to rc.user
 
