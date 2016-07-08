@@ -22,6 +22,7 @@ set.site 0 distributor sites=$SITES
 # Reset the offset DACs to clear anything they may have in their
 # registers after the change to sideport mode
 echo 1 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
+sleep 0.1
 echo 0 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
 
 # Correct operation of the calibration procedure requires
