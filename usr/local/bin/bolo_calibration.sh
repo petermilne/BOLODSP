@@ -24,6 +24,9 @@ echo 0 > /dev/dsp1/DSP_RESET
 sleep 1
 # Tell the FPGA this is a calibration run
 echo 1 > /dev/dsp1/CALIBRATION
+# Reverse bias the offset DAC to begin with
+osdac_reverse=0x03a000
+echo $osdac_reverse > /dev/dsp1/OSDAC_REG_DATA
 # Empiracally measured drop in voltage across diodes
 diode_drop=$(expect -c "puts [ expr {${diode_drop_v}/15.0*2**15}]")
 echo $diode_drop > /dev/dsp1/DIODE_DROP
@@ -42,7 +45,7 @@ echo 0x03${osdac_hex} > /dev/dsp1/OSDAC_REG_DATA
 # Wait for heating to equilibrium
 sleep $theat
 # Turn off the heating and reverse bias the offset DAC
-echo 0x03a000 > /dev/dsp1/OSDAC_REG_DATA
+echo $osdac_reverse > /dev/dsp1/OSDAC_REG_DATA
 # Wait for the cooling to finish
 sleep $tcool
 # Unset the trigger, ready for next run
