@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Check if the filters are ready for another reload (as indicated by the
+# filter status register bits 0 and 4). If the filters aren't ready,
+# send some data through them until they are.
+# To get data through, use streamtonowhered. Note however that this
+# will overwrite any previous transient capture data, so ensure that
+# this data is safely stored elsewhere before runing this script
+
+wait_until_filter_ready () {
+    filter_status=$(set.site 14 FILTER_STATUS)
+    voltage_ready=$((0x${filter_status}&0x1))
+    power_ready=$(((0x${filter_status}&0x10)>>4))
+    if [ $voltage_ready -eq 0 -o $power_ready -eq 0 ]
+    then
+        streamtonowhered start
+        sleep 1
+        soft_trigger
+    # Poll until the filters are ready
+        while true
+        do
+            filter_status=$(set.site 14 FILTER_STATUS)
+            voltage_ready=$((0x${filter_status}&0x1))
+            power_ready=$(((0x${filter_status}&0x10)>>4))
+            if [ $voltage_ready -eq 1 && $power_ready -eq 1 ]
+            then
+                break
+            else
+                sleep 0.5
+            fi
+        done
+        streamtonowhered stop
+    fi
+}
+
+wait_until_filter_ready
