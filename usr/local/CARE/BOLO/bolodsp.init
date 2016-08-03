@@ -13,8 +13,9 @@ do
 		else
 			SITES=$site
 		fi
-		# Low latency, unpacked, enable DAC and FIFO
-		set.site $site bolo_dac_enable=0x194
+		# Set DAC low-latency and enabled
+		set.site $site bolo_dac_lowlat=1
+		set.site $site bolo_dac_enable=1
 	fi
 done
 set.site 0 distributor sites=$SITES
