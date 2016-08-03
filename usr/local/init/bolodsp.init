@@ -1,4 +1,9 @@
 #!/bin/sh
+
+CUSTOM=/mnt/local/sysconfig/bolodsp.sh
+
+[ -e $CUSTOM ] && source $CUSTOM
+
 MDIR=/usr/local/lib/modules
 /sbin/insmod $MDIR/debugfs2.ko
 /sbin/insmod $MDIR/regfs.ko
@@ -16,7 +21,7 @@ ls -l /dev/dsp1.*
 echo "DSP sites 14, 15 active on 4234, 4235"
 
 
-NCHAN=24
+NCHAN=${NCHAN:-24}
 NDATAPERCHAN=3
 let NC="$NDATAPERCHAN*$NCHAN"
 NCM=3 # Number of output channels per physical channel
