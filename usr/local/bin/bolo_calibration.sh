@@ -25,7 +25,7 @@ sleep 1
 # Tell the FPGA this is a calibration run
 echo 1 > /dev/dsp1/CALIBRATION
 # Reverse bias the offset DAC to begin with
-osdac_reverse=0x03a000
+osdac_reverse=0xa000
 echo $osdac_reverse > /dev/dsp1/OSDAC_REG_DATA
 # Empiracally measured drop in voltage across diodes
 diode_drop=$(expect -c "puts [ expr {${diode_drop_v}/15.0*2**15}]")
@@ -39,9 +39,7 @@ soft_trigger 1
 # Wait for 0.1s to allow an offset measurement to be made
 sleep 0.1
 # Set the bias voltage
-# N.B. The top byte of the offset-DAC register should be 0x03, as this will
-# be translated into the broadcast address of the offset-DAC on the FPGA
-echo 0x03${osdac_hex} > /dev/dsp1/OSDAC_REG_DATA
+echo 0x${osdac_hex} > /dev/dsp1/OSDAC_REG_DATA
 # Wait for heating to equilibrium
 sleep $theat
 # Turn off the heating and reverse bias the offset DAC
