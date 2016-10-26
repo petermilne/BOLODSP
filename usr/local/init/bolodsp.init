@@ -13,15 +13,16 @@ ln -s /sys/kernel/debug/dsp1/ /dev/dsp1
 cat /usr/local/CARE/BOLO/bolo8dsp-regdef >/dev/dsp1/.create
 mkdir /etc/acq400/14/
 ln -s /dev/dsp1/* /etc/acq400/14/
-#ln -s /usr/local/bin/*lia* /etc/acq400/14/
 grep dsp /proc/devices | /usr/local/CARE/BOLO/build_dsp_nodes
 ls -l /dev/dsp1.*
 
 
 echo "DSP sites 14, 15 active on 4234, 4235"
 
-
-NCHAN=${NCHAN:-24}
+# There will be one directory per active BOLO8 in /dev/bolo8.
+# Each site has 8 physical channels
+N_ACTIVE_SITES=$(find /dev/bolo8 -mindepth 1 -maxdepth 1 -type d | wc -l)
+let NCHAN="$N_ACTIVE_SITES*8"
 NDATAPERCHAN=3
 let NC="$NDATAPERCHAN*$NCHAN"
 NCM=3 # Number of output channels per physical channel
@@ -56,7 +57,42 @@ grep -q "^$GOOD" $TI
 /usr/local/CARE/BOLO/make_bolodsp_knobs
 
 # Set up AO to use sideport
-/bin/sh /usr/local/CARE/BOLO/bolodsp.init
+SITES=
+for site in 1 2 3 4 5 6
+do
+	MT=/etc/acq400/$site/MTYPE
+	if [ -e $MT ] && [ "$(cat $MT)" = "64" ]; then
+		if [ "$SITES" != "" ]; then
+			SITES=$SITES,$site
+		else
+			SITES=$site
+		fi
+		# Set DAC low-latency and enabled
+		set.site $site bolo_dac_lowlat=1
+		set.site $site bolo_dac_enable=1
+	fi
+done
+set.site 0 distributor sites=$SITES
+
+# Reset the offset DACs to clear anything they may have in their
+# registers after the change to sideport mode
+echo 1 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
+sleep 0.1
+echo 0 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
+
+# Correct operation of the calibration procedure requires
+# that the main DAC is set to 40Vpp output
+echo 1 | tee /dev/bolo8/*/DAC_RANGE > /dev/null # 40Vpp output
+# Correct operation of the DSP procedure does not require
+# particular gain settings (though 1V25 is recommended).
+# Postpone these to rc.user
+
+# Set the drive frequency to 20kHz, to allow the sensors to reach thermal
+# equilibrium. The frequency can be changed later (including in rc.user)
+# if desired
+set.fdrive 20000
+
+set.sys /sys/module/acq420fmc/parameters/FIFERR 0
 
 /usr/local/init/acq400_knobs.init start
 
