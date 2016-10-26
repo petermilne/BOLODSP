@@ -1,5 +1,5 @@
 #!/bin/bash
-# SOS : simple one shot
+# BOLODSP DSP support for BOLO8
 DC=$(date +%y%m%d%H%M)
 SEQ=35
 PKG=bolodsp
