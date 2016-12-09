@@ -67,9 +67,8 @@ do
 		else
 			SITES=$site
 		fi
-		# Set DAC low-latency and enabled
-		set.site $site bolo_dac_lowlat=1
-		set.site $site bolo_dac_enable=1
+		# Set DSP mode: low latency, long word data, FIFO enabled
+		set.site $site bolo_dsp_mode=1
 	fi
 done
 set.site 0 distributor sites=$SITES
