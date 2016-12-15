@@ -1,0 +1,3 @@
+[submodule "calibfit/lmfit"]
+	path = calibfit/lmfit
+	url = git://apps.jcns.fz-juelich.de/lmfit
