@@ -68,7 +68,7 @@ do
 			SITES=$site
 		fi
 		# Set DSP mode: low latency, long word data, FIFO enabled
-		set.site $site bolo_dsp_mode=1
+		set.site $site bolo_dsp_enable=1
 	fi
 done
 set.site 0 distributor sites=$SITES
