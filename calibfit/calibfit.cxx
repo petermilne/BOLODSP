@@ -19,7 +19,7 @@ const float Z_30 = 1.16443535;
 /* A struct to store the calibration data for a given channel and pulse */
 struct CalibData {
   // Setup data
-  unsigned int pulse, channel, nsamples;
+  unsigned int channel, nsamples;
   // Time-based data
   std::vector<float> ucal, phical, vdc, curr, tcal;
   std::vector<float> ucool, phicool, tcool, currcool;
