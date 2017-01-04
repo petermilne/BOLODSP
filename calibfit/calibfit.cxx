@@ -6,8 +6,7 @@
 #include <string>
 #include <sstream>
 #include <cmath>
-#include <cassert>
-#include <cstring>
+#include <stdexcept>
 #include <algorithm>
 #include <getopt.h>
 #include "lmfit/lib/lmcurve.h"
@@ -127,7 +126,9 @@ void calc_cooling_period(CalibData &calib_data, float cooling_threshold, float t
           calib_data.currcool.push_back(*m);
         }
     }
-  assert(calib_data.tcool.size()>0); // We need some cooling
+  if(calib_data.tcool.size() == 0) {
+    throw std::runtime_error("No cooling measured??"); // We need some cooling
+  }
   // Set tcool to start at zero, to simplify the fit
   float cooling_start = calib_data.tcool.front();
   for(auto&& n: calib_data.tcool)
@@ -156,7 +157,9 @@ void calc_heating_period(CalibData &calib_data, float heating_threshold)
 	}
     }
   // Check we have successfully measured some heating
-  assert(calib_data.currheat.size()>0);
+  if(calib_data.currheat.size() == 0) {
+    throw std::runtime_error("No heating measured: reduce heating threshold");
+  }
 }
 
 /* This function calculates the sensitivity, by using the fit data and by
