@@ -16,6 +16,9 @@
  * Given by Z_30 = prod(i=1,30){sqrt(1 + 2**(-2*i))} */
 const float Z_30 = 1.16443535;
 
+/* Sample rate, used to relate time vector indices to values */
+const float deltat = 1.0e-4;
+
 /* A struct to store the calibration data for a given channel and pulse */
 struct CalibData {
   // Setup data
@@ -98,7 +101,6 @@ int read_calib_data(CalibData &calib_data, const std::string &fileroot)
     calib_data.curr.push_back((i & 0x0000ffff) * calib_data.curr_scale);
   }
   // Add the calibration time vector, based on a sample rate of 10kSPS
-  const float deltat = 1/1.0e4;
   const unsigned int nsamples = calib_data.ucal.size();
   calib_data.tcal.reserve(nsamples);
   for(unsigned int ti=0; ti<nsamples; ++ti) {
@@ -113,20 +115,16 @@ int read_calib_data(CalibData &calib_data, const std::string &fileroot)
  * after some time t_wait then the bolometer has been heated and is now cooling */
 void calc_cooling_period(CalibData &calib_data, float cooling_threshold, float t_wait)
 {
-  std::vector<float>::iterator i,j,k,l,m;
-  for(i=calib_data.ucal.begin(), j=calib_data.phical.begin(), k=calib_data.vdc.begin(), l=calib_data.tcal.begin(), m=calib_data.curr.begin();
-      i!=calib_data.ucal.end(); ++i, ++j, ++k, ++l, ++m)
-    {
-      /* Add elements of the calibration vectors to the corresponding cooling
-       * vectors, when cooling is taking place */
-      if(*k < cooling_threshold && *l > t_wait)
-        {
-          calib_data.ucool.push_back(*i);
-          calib_data.phicool.push_back(*j);
-          calib_data.tcool.push_back(*l);
-          calib_data.currcool.push_back(*m);
-        }
-    }
+  // Calculate starting element for a given t_wait
+  const unsigned int i_wait = static_cast<unsigned int>(t_wait / deltat);
+  // Calculate start of cooling: cooling is assumed to go from here to the end
+  const int cool_start = std::find_if(calib_data.vdc.begin()+i_wait, calib_data.vdc.end(),
+                                      [&cooling_threshold](const float& v) { return v < cooling_threshold; }) - calib_data.vdc.begin();
+  // Copy subset of data from cooling start to end into our struct
+  calib_data.ucool.assign(calib_data.ucal.begin() + cool_start, calib_data.ucal.end());
+  calib_data.phicool.assign(calib_data.phical.begin() + cool_start, calib_data.phical.end());
+  calib_data.tcool.assign(calib_data.tcal.begin() + cool_start, calib_data.tcal.end());
+  calib_data.currcool.assign(calib_data.curr.begin() + cool_start, calib_data.curr.end());
   if(calib_data.tcool.size() == 0) {
     throw std::runtime_error("No cooling measured??"); // We need some cooling
   }
