@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <fstream>
 #include <vector>
+#include <array>
 #include <numeric>
 #include <string>
 #include <sstream>
@@ -98,12 +99,12 @@ int read_calib_data(CalibData &calib_data, const std::string &fileroot)
   }
   // Add the calibration time vector, based on a sample rate of 10kSPS
   const float deltat = 1/1.0e4;
-  const unsigned int nelems = calib_data.ucal.size();
-  calib_data.tcal.reserve(nelems);
-  for(unsigned int ti=0; ti<nelems; ++ti) {
+  const unsigned int nsamples = calib_data.ucal.size();
+  calib_data.tcal.reserve(nsamples);
+  for(unsigned int ti=0; ti<nsamples; ++ti) {
     calib_data.tcal.push_back(ti * deltat);
   }
-  calib_data.nsamples = calib_data.ucal.size();
+  calib_data.nsamples = nsamples;
   return 0;
 }
 
@@ -144,8 +145,7 @@ void calc_heating_period(CalibData &calib_data, float heating_threshold)
   /* The current trace has a non-zero offset. We calculate the value at
    * zero current by taking the mean of the trace during cooling (when current=0) */
   const float current_offset = std::accumulate(calib_data.currcool.begin(), calib_data.currcool.end(), 0.0f) / calib_data.currcool.size();
-  std::vector<float>::iterator i,j;
-  for(i=calib_data.vdc.begin(), j=calib_data.curr.begin();
+  for(auto i=calib_data.vdc.begin(), j=calib_data.curr.begin();
       i!=calib_data.vdc.end(); ++i, ++j)
     {
       /* Add elements of the calibration vectors to the corresponding heating
@@ -204,36 +204,36 @@ void fit_cooling(CalibData &calib_data, float tau_guess)
 		 calib_data.phicool.begin(), qcool.begin(),
 		 [](float a, float phi) { return -0.5f * a * std::sin(phi); });
   // Fit icool, qcool
-  const int npar = 3;
   // lmcurve expects double arrays. So create copies of ours in double precision
-  std::vector<double> icoold(icool.begin(), icool.end());
-  std::vector<double> qcoold(qcool.begin(), qcool.end());
-  std::vector<double> tcoold(calib_data.tcool.begin(), calib_data.tcool.end());
+  const std::vector<double> icoold(icool.begin(), icool.end());
+  const std::vector<double> qcoold(qcool.begin(), qcool.end());
+  const std::vector<double> tcoold(calib_data.tcool.begin(), calib_data.tcool.end());
   // Fit icool
   const lm_control_struct icontrol = lm_control_float;
   lm_status_struct istatus;
   /* Initial guesses for Ae^-t*(1/tau)+B: A=i[start]-i[end], tau is given, B=i[end]
    * We fit to 1/tau rather than tau to speed up each call to the cooling
    * function, since multiplication is quicker than division */
-  double ipar[npar] = {icool.front()-icool.back(), 1/tau_guess, icool.back()};
-  lmcurve(npar, ipar, icoold.size(), tcoold.data(), icoold.data(), fcool, &icontrol, &istatus);
+  const int npar = 3;
+  std::array<double, npar> ipar = {icool.front()-icool.back(), 1/tau_guess, icool.back()};
+  lmcurve(npar, ipar.data(), icoold.size(), tcoold.data(), icoold.data(), fcool, &icontrol, &istatus);
   // Fit qcool
   const lm_control_struct qcontrol = lm_control_float;
   lm_status_struct qstatus;
-  double qpar[npar] = {qcool.front()-qcool.back(), 1/tau_guess, qcool.back()};
-  lmcurve(npar, qpar, qcoold.size(), tcoold.data(), qcoold.data(), fcool, &qcontrol, &qstatus);
-  std::cout << std::setprecision(7) << "Fit parameters for i: " << ipar[0] << "\t" << ipar[1] << "\t" << ipar[2] << std::endl;
-  std::cout << std::setprecision(7) << "Fit parameters for q: " << qpar[0] << "\t" << qpar[1] << "\t" << qpar[2] << std::endl;
+  std::array<double, npar> qpar = {qcool.front()-qcool.back(), 1/tau_guess, qcool.back()};
+  lmcurve(npar, qpar.data(), qcoold.size(), tcoold.data(), qcoold.data(), fcool, &qcontrol, &qstatus);
+  std::cout << std::setprecision(7) << "Fit parameters for i: " << ipar.at(0) << "\t" << ipar.at(1) << "\t" << ipar.at(2) << std::endl;
+  std::cout << std::setprecision(7) << "Fit parameters for q: " << qpar.at(0) << "\t" << qpar.at(1) << "\t" << qpar.at(2) << std::endl;
   // Calculate the sensitivity
-  calc_sens(calib_data, ipar[0], qpar[0]);
+  calc_sens(calib_data, ipar.at(0), qpar.at(0));
   // The cooling time is the average of the I and Q calculated values
-  calib_data.tau = (1/ipar[1] + 1/qpar[1]) / 2;
+  calib_data.tau = (1/ipar.at(1) + 1/qpar.at(1)) / 2;
   /* The offsets need to be converted back into polar for post-processing, but
    * kept in Cartesian for loading into the FPGA's offset correction logic */
-  calib_data.i0 = ipar[2];
-  calib_data.q0 = qpar[2];
-  calib_data.a0 = 2*std::hypot(ipar[2], qpar[2]);
-  calib_data.phi0 = std::atan2(-qpar[2], ipar[2]);
+  calib_data.i0 = ipar.at(2);
+  calib_data.q0 = qpar.at(2);
+  calib_data.a0 = 2*std::hypot(ipar.at(2), qpar.at(2));
+  calib_data.phi0 = std::atan2(-qpar.at(2), ipar.at(2));
 }
 
 int main(int argc, char *argv[])
