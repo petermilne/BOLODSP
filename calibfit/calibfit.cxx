@@ -168,9 +168,10 @@ void calc_sens(CalibData &calib_data, float ip0, float qp0)
   /* The sensitivity is simply the height divided by the input power. Average
    * the input power over the whole heating period */
   std::vector<float> p_heat(calib_data.vdcheat.size());
-  // P = IV
+  // P = 2 * IV, since we measure the current through only one resistor
   std::transform(calib_data.currheat.begin(), calib_data.currheat.end(),
-		 calib_data.vdcheat.begin(), p_heat.begin(), std::multiplies<float>());
+		 calib_data.vdcheat.begin(), p_heat.begin(),
+                 [](const float &I, const float &V) { return 2 * I * V; });
   // Average is sum divided by length
   const float p_average = std::accumulate(p_heat.begin(), p_heat.end(), 0.0f) / p_heat.size();
   // Amplitude sensitivity requires converting fit back to polar
