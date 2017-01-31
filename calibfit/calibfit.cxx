@@ -58,7 +58,7 @@ std::vector<int32_t> read_file(const std::string &filename)
 /* This function reads all of the required data for the channel specified
  * in calib_data. It assumes a transient capture has been completed, and
  * the data is stored in logical channels at the fileroot path */
-int read_calib_data(CalibData &calib_data, const std::string &fileroot)
+void read_calib_data(CalibData &calib_data, const std::string &fileroot)
 {
   /* Calculate the logical channel numbers based on the physical channel
    * Each physical channel has 3 logical channels. Channels are grouped
@@ -107,7 +107,6 @@ int read_calib_data(CalibData &calib_data, const std::string &fileroot)
     calib_data.tcal.push_back(ti * deltat);
   }
   calib_data.nsamples = nsamples;
-  return 0;
 }
 
 /* This function calculates the part of the calibration curve to use for fitting
@@ -277,13 +276,8 @@ int main(int argc, char *argv[])
   calib_data.channel = channel;
   // Read the data from transient output files
   const std::string fileroot("/dev/acq400/data");
-  int retval = read_calib_data(calib_data, fileroot);
-  if (retval < 0) {
-    std::cout << "Error reading data" << std::endl;
-    return -1;
-  } else {
-    std::cout << "Successfully read " << calib_data.curr.size() << " samples\n";
-  }
+  read_calib_data(calib_data, fileroot);
+  std::cout << "Successfully read " << calib_data.curr.size() << " samples\n";
   // Calculate calibration constants
   calc_cooling_period(calib_data, cooling_threshold, t_wait);
   calc_heating_period(calib_data, heating_threshold);
