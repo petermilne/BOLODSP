@@ -283,11 +283,11 @@ int main(int argc, char *argv[])
   calc_heating_period(calib_data, heating_threshold);
   fit_cooling(calib_data, tau_guess);
   std::cout << "Fitting complete. Fit parameters:\n";
-  std::cout << std::setprecision(7) << "sens = "<< calib_data.sens << std::endl;
-  std::cout << std::setprecision(7) << "tau = "<< calib_data.tau << std::endl;
-  std::cout << std::setprecision(7) << "a0 = "<< calib_data.a0 << std::endl;
-  std::cout << std::setprecision(7) << "phi0 = "<< calib_data.phi0 << std::endl;
-  std::cout << std::setprecision(7) << "i0 = "<< calib_data.i0 << std::endl;
-  std::cout << std::setprecision(7) <<  "q0 = "<< calib_data.q0 << std::endl;
+  std::cout << std::setprecision(7) << "sens = " << calib_data.sens << std::endl;
+  std::cout << std::setprecision(7) << "tau = " << calib_data.tau << std::endl;
+  std::cout << std::setprecision(7) << "a0 = " << calib_data.a0 << std::endl;
+  std::cout << std::setprecision(7) << "phi0 = " << calib_data.phi0 << std::endl;
+  std::cout << std::setprecision(7) << "i0 = " << calib_data.i0 << std::endl;
+  std::cout << std::setprecision(7) << "q0 = " << calib_data.q0 << std::endl;
   return 0;
 }
