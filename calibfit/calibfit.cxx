@@ -244,28 +244,28 @@ int main(int argc, char *argv[])
   int opt = 0;
   int option_index = 0;
   static struct option long_options[] = {
-    {"channel", 1, NULL, 'c'},
-    {"cooling_threshold", 0, NULL, 'C'},
-    {"heating_threshold", 0, NULL, 'H'},
-    {"t_wait", 0, NULL, 't'},
-    {"tau_guess", 1, NULL, 'T'},
+    {"channel", 1, nullptr, 'c'},
+    {"cooling_threshold", 0, nullptr, 'C'},
+    {"heating_threshold", 0, nullptr, 'H'},
+    {"t_wait", 0, nullptr, 't'},
+    {"tau_guess", 1, nullptr, 'T'},
     {0, 0, 0, 0}
   };
   while((opt = getopt_long(argc, argv, "c:C:H:t:T:", long_options, &option_index)) != -1) {
     switch(opt) {
     case 'c':
-      channel = static_cast<unsigned int>(std::strtol(optarg, NULL, 0));
+      channel = static_cast<unsigned int>(std::strtol(optarg, nullptr, 0));
       break;
     case 'C':
-      cooling_threshold = std::strtof(optarg, NULL);
+      cooling_threshold = std::strtof(optarg, nullptr);
       break;
     case 'H':
-      heating_threshold = std::strtof(optarg, NULL);
+      heating_threshold = std::strtof(optarg, nullptr);
     case 't':
-      t_wait = std::strtof(optarg, NULL);
+      t_wait = std::strtof(optarg, nullptr);
       break;
     case 'T':
-      tau_guess = std::strtof(optarg, NULL);
+      tau_guess = std::strtof(optarg, nullptr);
     default:
       std::cout << "Usage: " << argv[0] << " [-c channel] [-C cooling_theshold] "
 		<< "[-H heating_threshold] [-t t_wait] [-T tau_guess]\n";
