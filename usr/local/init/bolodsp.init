@@ -16,7 +16,7 @@ do
 	if [ "$FRU_PROD_NAME" = "BOLO8BLF" ]; then
 		caldef=$site/caldef.xml
 		nc=$(xml_lookup --config=$caldef 
-			ACQ.AcqCalibration.Data.@AICHANXXX)
+			ACQ.AcqCalibration.Data.@AICHAN)
 		if [ "$nc" != "24" ]; then
 			echo "creating 24 channel caldef"
 			cp /usr/local/CARE/BOLO/caldef-24.xml $caldef
