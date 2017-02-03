@@ -10,6 +10,19 @@ MDIR=/usr/local/lib/modules
 /sbin/insmod $MDIR/acq400_dspfs.ko
 ln -s /sys/kernel/debug/dsp1/ /dev/dsp1
 
+for site in /dev/sites/?
+do
+	source $site/details
+	if [ "$FRU_PROD_NAME" = "BOLO8BLF" ]; then
+		caldef=$site/caldef.xml
+		nc=$(xml_lookup --config=$caldef 
+			ACQ.AcqCalibration.Data.@AICHANXXX)
+		if [ "$nc" != "24" ]; then
+			echo "creating 24 channel caldef"
+			cp /usr/local/CARE/BOLO/caldef-24.xml $caldef
+		fi
+	fi
+done
 cat /usr/local/CARE/BOLO/bolo8dsp-regdef >/dev/dsp1/.create
 mkdir /etc/acq400/14/
 ln -s /dev/dsp1/* /etc/acq400/14/
