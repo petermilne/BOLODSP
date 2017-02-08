@@ -14,10 +14,16 @@
 
 /* CORDIC scale factor for 32 bit data (nbits-2 according to Xilinx)
  * Given by Z_30 = prod(i=1,30){sqrt(1 + 2**(-2*i))} */
-const float Z_30 = 1.16443535;
+static constexpr float Z_30 = 1.16443535;
 
 /* Sample rate, used to relate time vector indices to values */
-const float deltat = 1.0e-4;
+static constexpr float deltat = 1.0e-4;
+
+// Raw data scalings
+static constexpr float ucal_scale = (1.25/std::exp2(24)) * (20.0/18.0) / Z_30;
+static constexpr float phical_scale = std::exp2(-29);
+static constexpr float vdc_scale = 1.25 / std::exp2(15);
+static constexpr float curr_scale = (128.0/100.0) * std::exp2(-12) * (25.0/3.0) / 1000.0;
 
 /* A struct to store the calibration data for a given channel and pulse */
 struct CalibData {
@@ -29,11 +35,6 @@ struct CalibData {
   std::vector<float> vdcheat, currheat;
   // Calculated calibration constants
   float sens, tau, a0, phi0, i0, q0;
-  // Raw data scalings
-  const float ucal_scale = (1.25/std::exp2(24)) * (20.0/18.0) / Z_30;
-  const float phical_scale = std::exp2(-29);
-  const float vdc_scale = 1.25 / std::exp2(15);
-  const float curr_scale = (128.0/100.0) * std::exp2(-12) * (25.0/3.0) / 1000.0;
 };
 
 /* This function reads the file "filename" and returns the read data as
@@ -78,9 +79,9 @@ void read_calib_data(CalibData &calib_data, const std::string &fileroot)
   /* Now we want to open the files and read all the data. Since the data is
    * stored as 32-bit integers, we create an integer vector and read into this
    * then apply the appropriate scaling to write into our CalibData struct */
-  std::vector<int32_t> ucal_rawdata = read_file(ucal_file.str());
-  std::vector<int32_t> phical_rawdata = read_file(phical_file.str());
-  std::vector<int32_t> bias_rawdata = read_file(bias_file.str());
+  const std::vector<int32_t> ucal_rawdata = read_file(ucal_file.str());
+  const std::vector<int32_t> phical_rawdata = read_file(phical_file.str());
+  const std::vector<int32_t> bias_rawdata = read_file(bias_file.str());
   /* Multiply the raw voltage and phase values by their respective scale
    * factors, and insert the results into the calib_data struct */
   calib_data.ucal.reserve(ucal_rawdata.size());
@@ -88,17 +89,17 @@ void read_calib_data(CalibData &calib_data, const std::string &fileroot)
   calib_data.vdc.reserve(bias_rawdata.size());
   calib_data.curr.reserve(bias_rawdata.size());
   for(auto&& i: ucal_rawdata) {
-    calib_data.ucal.push_back(i * calib_data.ucal_scale);
+    calib_data.ucal.push_back(i * ucal_scale);
   }
   for(auto&& i: phical_rawdata) {
-    calib_data.phical.push_back(i * calib_data.phical_scale);
+    calib_data.phical.push_back(i * phical_scale);
   }
   /* For VDC and current, first extract the top 16 bits for VDC and bottom 16
    * bits for current, then multiply by the respective scale factors and copy
    * to the calib-data struct */
   for(auto&& i: bias_rawdata) {
-    calib_data.vdc.push_back((i>>16) * calib_data.vdc_scale);
-    calib_data.curr.push_back((i & 0x0000ffff) * calib_data.curr_scale);
+    calib_data.vdc.push_back((i>>16) * vdc_scale);
+    calib_data.curr.push_back((i & 0x0000ffff) * curr_scale);
   }
   // Add the calibration time vector, based on a sample rate of 10kSPS
   const unsigned int nsamples = calib_data.ucal.size();
@@ -128,7 +129,7 @@ void calc_cooling_period(CalibData &calib_data, float cooling_threshold, float t
     throw std::runtime_error("No cooling measured??"); // We need some cooling
   }
   // Set tcool to start at zero, to simplify the fit
-  float cooling_start = calib_data.tcool.front();
+  const float cooling_start = calib_data.tcool.front();
   for(auto&& n: calib_data.tcool)
     {
       n -= cooling_start;
@@ -196,11 +197,11 @@ void fit_cooling(CalibData &calib_data, float tau_guess)
   // I = A cos(phi)
   std::transform(calib_data.ucool.begin(), calib_data.ucool.end(),
 		 calib_data.phicool.begin(), icool.begin(),
-		 [](float a, float phi) { return 0.5f * a * std::cos(phi); });
+		 [](const float &a, const float &phi) { return 0.5f * a * std::cos(phi); });
   // Q = -A sin(phi)
   std::transform(calib_data.ucool.begin(), calib_data.ucool.end(),
 		 calib_data.phicool.begin(), qcool.begin(),
-		 [](float a, float phi) { return -0.5f * a * std::sin(phi); });
+		 [](const float &a, const float &phi) { return -0.5f * a * std::sin(phi); });
   // Fit icool, qcool
   // lmcurve expects double arrays. So create copies of ours in double precision
   const std::vector<double> icoold(icool.begin(), icool.end());
