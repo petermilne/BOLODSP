@@ -130,10 +130,9 @@ void calc_cooling_period(CalibData &calib_data, float cooling_threshold, float t
   }
   // Set tcool to start at zero, to simplify the fit
   const float cooling_start = calib_data.tcool.front();
-  for(auto&& n: calib_data.tcool)
-    {
-      n -= cooling_start;
-    }
+  for(auto&& n: calib_data.tcool) {
+    n -= cooling_start;
+  }
 }
 
 /* This function calculates when heating is occuring. It does this by looking
@@ -144,16 +143,14 @@ void calc_heating_period(CalibData &calib_data, float heating_threshold)
    * zero current by taking the mean of the trace during cooling (when current=0) */
   const float current_offset = std::accumulate(calib_data.currcool.begin(), calib_data.currcool.end(), 0.0f) / calib_data.currcool.size();
   for(auto i=calib_data.vdc.begin(), j=calib_data.curr.begin();
-      i!=calib_data.vdc.end(); ++i, ++j)
-    {
-      /* Add elements of the calibration vectors to the corresponding heating
-       * vectors, when heating is taking place */
-      if(*i > heating_threshold)
-	{
-	  calib_data.vdcheat.push_back(*i);
-	  calib_data.currheat.push_back(*j - current_offset);
-	}
+      i!=calib_data.vdc.end(); ++i, ++j) {
+    /* Add elements of the calibration vectors to the corresponding heating
+     * vectors, when heating is taking place */
+    if(*i > heating_threshold) {
+      calib_data.vdcheat.push_back(*i);
+      calib_data.currheat.push_back(*j - current_offset);
     }
+  }
   // Check we have successfully measured some heating
   if(calib_data.currheat.size() == 0) {
     throw std::runtime_error("No heating measured: reduce heating threshold");
