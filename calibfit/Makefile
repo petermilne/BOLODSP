@@ -10,7 +10,7 @@ CXXFLAGS=-Wall -std=c++11 -O3 -mcpu=cortex-a9 -mfpu=neon -ffast-math -I$(LMDIR)/
 
 all: calibfit
 
-lmcurve.o: $(LMDIR)/lib/lmcurve.c $(LMDIR)/lib/lmmin.c
+lmcurve.o: $(LMDIR)/lib/lmcurve.c
 	$(CROSS_COMPILE)gcc -c $(CFLAGS) $(LMDIR)/lib/lmcurve.c
 
 lmmin.o: $(LMDIR)/lib/lmmin.c
