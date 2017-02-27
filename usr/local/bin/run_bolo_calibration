@@ -1,0 +1,30 @@
+#!/bin/sh
+# runs a full bolo calibration 
+# with thanks to marco.cavallone@epfl.ch
+# not sure whether to set or get the knobs. default is get.
+
+PATH=$PATH:/usr/local/bin
+
+if [ "x$SETTHEKNOBS" = "y" ]; then
+set.site 14 DIODE_DROP_V ${1:-0.5}
+set.site 14 THEAT ${2:-1.0}
+set.site 14 TCOOL ${3:-1.0}
+set.site 14 VBIAS ${4:-1.0}
+else
+get.site 14 DIODE_DROP_V
+get.site 14 THEAT
+get.site 14 TCOOL
+get.site 14 VBIAS
+fi
+
+set.site 0 transient POST=100000 SOFT_TRIGGER=0
+set.site 0 set_arm
+
+reset.dsp
+load_offset_channel.tcl 1 0 0 inf
+load_offset_channel.tcl 2 0 0 inf
+load_offset_channel.tcl 3 0 0 inf
+load_offset_channel.tcl 4 0 0 inf
+
+bolo_calibration
+
