@@ -55,4 +55,5 @@ do
 	fit_cal_ch $ch
 done
 
+echo "END"
 
