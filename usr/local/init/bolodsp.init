@@ -110,3 +110,16 @@ set.sys /sys/module/acq420fmc/parameters/FIFERR 0
 
 /usr/local/bin/monitor_dsp1 2>&1 >/dev/null  &
 
+# automation wrapper calibration svc at 0xb010
+echo "bolodspcal 45072/tcp" >> /etc/services
+cat - >/etc/inetd.bolo.conf <<EOF
+45072 stream tcp nowait run_calibfit run_calibfit dummy
+EOF
+
+inetd /etc/inetd.bolo.conf
+
+# RECOMMEND: create /mnt/local/sysconfig/bolo.sh
+#BOLO_ACTIVE_CHAN="1 2 3 4 5 6 7 8"
+#BOLO_ACTIVE_CHAN=2
+#BOLO_VERBOSE=1
+
