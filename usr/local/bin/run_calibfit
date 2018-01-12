@@ -3,7 +3,8 @@
 # customize with /mnt/local/sysconfig/bolo.sh
 # runs under inetd at port 0xb010 (45072)
 export PATH=$PATH:/usr/local/bin/
-if [ -e /mnt/local/sysconfig/bolo.sh ]; then
+
+if [ ! -e /mnt/local/sysconfig/bolo.sh ]; then
 cat - >/mnt/local/sysconfig/bolo.sh <<EOF
 BOLO_ACTIVE_CHAN="1 2 3 4 5 6 7 8"
 BOLO_VERBOSE=1
