@@ -1,0 +1,16 @@
+BOLODSP:
+
+DSP automation routines for BOLO8.
+All math courtesy of Jack Lovell.
+Final packaging by Peter Milne.
+
+BOLODSP provides "calibration as a service", connect to port 0xb010 to run a
+calibration.
+
+
+For explanation of BOLO8, see
+https://github.com/jacklovell/bolodsp-doc/releases
+
+calibfit math routine:
+make as non privaleged user see calibfit/README
+
