@@ -22,15 +22,6 @@ rv() {
 	$*
 }
 
-prompt() {
-	echo $* y/n
-	read yn
-	echo thanks $yn
-	if [ "$yn" = "q" ]; then
-		echo quitting time
-		exit 1
-	fi
-}
 fit_cal_ch() {
 	ch=$1
 	[ $BOLO_VERBOSE ] && (echo;echo;echo "fit_cal_ch $ch")
@@ -44,8 +35,6 @@ fit_cal_ch() {
 	
 	echo >>/tmp/calibfit.log load_offset_channel.tcl $ch $i0 $q0 $sens
 	
-	#rv power_filter_design.tcl $ch $sens $tau
-	#rv /usr/local/bin/wait_for_filters
 }
 
 
@@ -57,20 +46,14 @@ do
 	 load_offset_channel.tcl $ch 0 0 1
 done
 
-#prompt reset dsp and continue
-
 reset.dsp
 
 set.site 0 'transient POST=21000 SOFT_TRIGGER=0; set_arm'
-#transient POST=21000 SOFT_TRIGGER=0
-#set_arm
 wait_until_state 1
 
 bolo_calibration
 
 reset.dsp
-
-#prompt next up fit_cal, maybe quit while going good ..
 
 for ch in $BOLO_ACTIVE_CHAN
 do
