@@ -1,7 +1,9 @@
 #!/usr/local/bin/expect
+
 set fd [ open /dev/dsp1.3 r ]
 binary scan [ read $fd 768 ] i192 offsets
 close $fd
+
 set offsets
 set offlist [split $offsets]
 set offsets1 {}
@@ -21,7 +23,6 @@ for {set i 0} {$i < 24} {incr i} {
 	lappend offsets2 [ lindex $offlist [ expr $i+48 ] ]
 	lappend offsets3 [ lindex $offlist [ expr $i+96 ] ]
 	lappend offsets4 [ lindex $offlist [ expr $i+144 ] ]
-	
 }
 
 set formatStr {%15s%20s%20s%17s%17s}
@@ -32,13 +33,3 @@ foreach channelsValue $channels offsets1Value $offsets1 offsets2Value $offsets2 
     puts [format $formatStr $channelsValue $offsets1Value $offsets2Value $offsets3Value $offsets4Value]
 }
 
-
-
-#puts "RAM"
-#puts "offlist = $offlist"
-#puts "offsets_full = $offsets_full"
-
-#puts " 1 = $offsets1"
-#puts $offsets2
-#puts $offsets3
-#puts $offsets4
