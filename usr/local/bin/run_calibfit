@@ -67,6 +67,7 @@ do
 	rv /usr/local/bin/wait_for_filters
 done
 
+/usr/local/bin/web_diagnostics_cal
 
 echo "END"
 
