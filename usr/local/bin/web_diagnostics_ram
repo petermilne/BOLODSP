@@ -1,0 +1,61 @@
+#!/bin/sh
+
+DEV=BOLO_RAM
+DIR=/dev/web_offsets/
+
+#httpd doesn't like names with periods..
+XMLNAME=$DEV
+
+cCrR() {
+cat - <<EOF
+        <pageFormat>
+                <noCols>$1</noCols>
+                <colItems>$2</colItems>
+        </pageFormat>
+EOF
+}
+
+C4R48=/dev/shm/c4rR48
+
+[ -e $C4R48 ] || cCrR 4 48 > $C4R48
+
+dump_regs() {
+        cd /dev/web_offsets; /usr/local/bin/lscat
+}
+
+ADDED_WEB=0
+
+add_web() {
+if [ -e /var/www/d-tacq/acq_main_page.html ]; then
+        grep -q $DEV /var/www/d-tacq/acq_main_page.html
+        if [ $? -ne 0 ]; then
+                sed -ie '/TABAPPEND/ {
+a       <li><a title="'$DEV'" href="acq_info_page.html">'$DEV'</a></li>
+}' /var/www/d-tacq/acq_main_page.html
+        fi
+        ADDED_WEB=1
+fi
+}
+
+monitor() {
+        while [ 1 ]
+        do
+                [ $ADDED_WEB -eq 0 ] && add_web
+                # dump_regs | fs2xml --kvp -o /dev/shm/$XMLNAME.xml -s $C4R48
+		/mnt/local/sean/diagnostics.tcl | fs2xml -o /dev/shm/$XMLNAME.xml -k ''
+#		/mnt/local/sean/diagnostics.tcl
+		#/usr/local/bin/diagnostics.tcl | /dev/shm/$XMLNAME.xml 
+		echo About to sleep
+                sleep 1
+        done
+}
+
+if [ "$(basename $0)" = "web_diagnostics_ram" ]; then
+        if [ -d $DIR ]; then
+                monitor
+        else
+                echo ERROR: monitor dir not found: $DIR
+        fi
+fi
+
+
