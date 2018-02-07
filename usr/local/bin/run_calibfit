@@ -68,6 +68,6 @@ do
 done
 
 /usr/local/bin/web_diagnostics_cal
-
+/usr/local/bin/web_diagnostics_ram &
 echo "END"
 

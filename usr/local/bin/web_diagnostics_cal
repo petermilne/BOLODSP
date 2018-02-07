@@ -22,17 +22,13 @@ monitor() {
         
         
 	[ $ADDED_WEB -eq 0 ] && add_web
-	./web_cal_data.tcl |  fs2xml -o /dev/shm/$XMLNAME.xml -k ''
+	/usr/local/bin/web_cal_data.tcl |  fs2xml -o /dev/shm/$XMLNAME.xml -k ''
 	sleep 1
         
 }
 
 if [ "$(basename $0)" = "web_diagnostics_cal" ]; then
-        if [ -d $DIR ]; then
-                monitor
-        else
-                echo ERROR: monitor dir not found: $DIR
-        fi
+	monitor
 fi
 
 
