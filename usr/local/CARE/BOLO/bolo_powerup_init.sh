@@ -42,6 +42,6 @@ sleep 1
 soft_trigger
 sleep 1
 /usr/local/bin/streamtonowhered stop
-#/usr/local/bin/web_diagnostics_ram
+/usr/local/bin/web_diagnostics_ram
 ) &
 
