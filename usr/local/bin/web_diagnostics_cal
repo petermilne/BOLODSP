@@ -28,7 +28,7 @@ monitor() {
 }
 
 if [ "$(basename $0)" = "web_diagnostics_cal" ]; then
-	monitor
+  monitor
 fi
 
 
