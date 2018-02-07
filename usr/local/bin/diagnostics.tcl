@@ -4,6 +4,7 @@ set fd [ open /dev/dsp1.3 r ]
 binary scan [ read $fd 768 ] i192 offsets
 close $fd
 
+
 set offsets
 set offlist [split $offsets]
 set offsets1 {}

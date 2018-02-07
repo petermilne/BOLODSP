@@ -42,7 +42,9 @@ monitor() {
         do
                 [ $ADDED_WEB -eq 0 ] && add_web
                 # dump_regs | fs2xml --kvp -o /dev/shm/$XMLNAME.xml -s $C4R48
-		/mnt/local/sean/diagnostics.tcl | fs2xml -o /dev/shm/$XMLNAME.xml -k ''
+		
+		/usr/local/bin/diagnostics.tcl | fs2xml -o /dev/shm/$XMLNAME.xml -k ''
+		
 #		/mnt/local/sean/diagnostics.tcl
 		#/usr/local/bin/diagnostics.tcl | /dev/shm/$XMLNAME.xml 
 		echo About to sleep
