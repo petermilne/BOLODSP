@@ -17,24 +17,27 @@ fi
 source /mnt/local/sysconfig/bolo.sh
 reset.dsp
 
+
+
 rv() {
-	[ $BOLO_VERBOSE ] && echo $*
-	$*
+        [ $BOLO_VERBOSE ] && echo $*
+        $*
 }
 
 fit_cal_ch() {
-	ch=$1
-	[ $BOLO_VERBOSE ] && (echo;echo;echo "fit_cal_ch $ch")
-	
-	/usr/local/bin/calibfit -c $ch 2>&1 > /tmp/pgm_calibfit.txt              
-	[ $BOLO_VERBOSE ] && cat /tmp/pgm_calibfit.txt                                           
-	cat /tmp/pgm_calibfit.txt | grep = | tr -d \  > /tmp/pgm_calibfit.sh
-	source /tmp/pgm_calibfit.sh
-	
-	rv load_offset_channel.tcl $ch $i0 $q0 $sens
-	
-	echo >>/tmp/calibfit.log load_offset_channel.tcl $ch $i0 $q0 $sens
-	
+        ch=$1
+        [ $BOLO_VERBOSE ] && (echo;echo;echo "fit_cal_ch $ch")
+
+        /usr/local/bin/calibfit -c $ch 2>&1 > /tmp/pgm_calibfit.txt
+        [ $BOLO_VERBOSE ] && cat /tmp/pgm_calibfit.txt
+        cat /tmp/pgm_calibfit.txt | grep = | tr -d \  > /tmp/pgm_calibfit.sh
+        source /tmp/pgm_calibfit.sh
+
+        rv load_offset_channel.tcl $ch $i0 $q0 $sens
+
+        echo >>/tmp/calibfit.log load_offset_channel.tcl $ch $i0 $q0 $sens
+
+        echo $sens $tau >> /tmp/senslogs.txt
 }
 
 
@@ -43,7 +46,7 @@ fit_cal_ch() {
 
 for ch in $BOLO_ACTIVE_CHAN
 do
-	 load_offset_channel.tcl $ch 0 0 1
+         load_offset_channel.tcl $ch 0 0 1
 done
 
 reset.dsp
@@ -57,17 +60,18 @@ reset.dsp
 
 for ch in $BOLO_ACTIVE_CHAN
 do
-	fit_cal_ch $ch
+        fit_cal_ch $ch
 done
 
 for ch in $BOLO_ACTIVE_CHAN
-do 
-	echo DEBUG -- New Loop
-	rv power_filter_design.tcl $ch $sens $tau
-	rv /usr/local/bin/wait_for_filters
+do
+        fil_args=$(awk 'NR=='$ch' {print $0}' /tmp/senslogs.txt)
+        rv power_filter_design.tcl $ch $fil_args
+        rv /usr/local/bin/wait_for_filters
 done
+
+rm /tmp/senslogs.txt
 
 /usr/local/bin/web_diagnostics_cal
 /usr/local/bin/web_diagnostics_ram &
 echo "END"
-
