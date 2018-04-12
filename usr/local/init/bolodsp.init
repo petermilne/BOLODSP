@@ -113,7 +113,7 @@ set.sys /sys/module/acq420fmc/parameters/FIFERR 0
 # automation wrapper calibration svc at 0xb010
 echo "bolodspcal 45072/tcp" >> /etc/services
 cat - >/etc/inetd.bolo.conf <<EOF
-45072 stream tcp nowait root run_calibfit run_calibfit dummy
+45072 stream tcp nowait root run_calibfit run_calibfit
 EOF
 
 inetd /etc/inetd.bolo.conf
