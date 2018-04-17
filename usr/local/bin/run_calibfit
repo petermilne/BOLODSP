@@ -28,7 +28,7 @@ fit_cal_ch() {
         ch=$1
         [ $BOLO_VERBOSE ] && (echo;echo;echo "fit_cal_ch $ch")
 
-        /usr/local/bin/calibfit -c $ch 2>&1 > /tmp/pgm_calibfit.txt
+        /usr/local/bin/calibfit -c $ch $CALIBFITARGS 2>&1 >/tmp/pgm_calibfit.txt
         [ $BOLO_VERBOSE ] && cat /tmp/pgm_calibfit.txt
         cat /tmp/pgm_calibfit.txt | grep = | tr -d \  > /tmp/pgm_calibfit.sh
         source /tmp/pgm_calibfit.sh
@@ -73,5 +73,5 @@ done
 rm /tmp/senslogs.txt
 
 /usr/local/bin/web_diagnostics_cal
-/usr/local/bin/web_diagnostics_ram &
+/usr/local/bin/web_diagnostics_ram 
 echo "END"
