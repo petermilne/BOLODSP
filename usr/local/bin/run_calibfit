@@ -83,12 +83,20 @@ then
     done
 fi
 
+# Start running data through the filters so we can load multiple power filters
+streamtonowhered start
+until set.site 0 transient_state | grep -qe ^1
+do
+    sleep 0.1
+done
+soft_trigger
 for ch in $BOLO_ACTIVE_CHAN
 do
         fil_args=$(awk 'NR=='$ch' {print $0}' /tmp/senslogs.txt)
         rv power_filter_design.tcl $ch $fil_args
-        rv /usr/local/bin/wait_for_filters
+        rv /usr/local/bin/wait_for_filters nospawn
 done
+streamtonowhered stop
 
 rm /tmp/senslogs.txt
 
