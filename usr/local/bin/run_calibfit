@@ -36,7 +36,7 @@ fit_cal_ch() {
 
         rv load_offset_channel.tcl $ch $i0 $q0 $sens
 
-        echo >>/tmp/calibfit.log load_offset_channel.tcl $ch $i0 $q0 $sens
+        echo >>/tmp/calibfit.log calibration_data $ch $i0 $q0 $sens $tau
 
         echo $ch $sens $tau >> /tmp/senslogs.txt
 }
