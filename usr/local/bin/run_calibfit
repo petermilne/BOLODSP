@@ -37,7 +37,7 @@ fit_cal_ch() {
 
         echo >>/tmp/calibfit.log load_offset_channel.tcl $ch $i0 $q0 $sens
 
-        echo $sens $tau >> /tmp/senslogs.txt
+        echo $ch $sens $tau >> /tmp/senslogs.txt
 }
 
 
@@ -92,7 +92,7 @@ done
 soft_trigger
 for ch in $BOLO_ACTIVE_CHAN
 do
-        fil_args=$(awk 'NR=='$ch' {print $0}' /tmp/senslogs.txt)
+        fil_args=$(awk '$1=='$ch' {print $2, $3}' /tmp/senslogs.txt)
         rv power_filter_design.tcl $ch $fil_args
         rv /usr/local/bin/wait_for_filters nospawn
 done
