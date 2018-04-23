@@ -247,15 +247,17 @@ int main(int argc, char *argv[])
   float tau_guess = 0.2;
   int opt = 0;
   int option_index = 0;
+  std::string fileroot("/dev/acq400/data");
   static struct option long_options[] = {
-    {"channel", 1, nullptr, 'c'},
-    {"cooling_threshold", 0, nullptr, 'C'},
-    {"heating_threshold", 0, nullptr, 'H'},
-    {"t_wait", 0, nullptr, 't'},
-    {"tau_guess", 1, nullptr, 'T'},
+    {"channel", required_argument, nullptr, 'c'},
+    {"cooling_threshold", required_argument, nullptr, 'C'},
+    {"heating_threshold", required_argument, nullptr, 'H'},
+    {"t_wait", required_argument, nullptr, 't'},
+    {"tau_guess", required_argument, nullptr, 'T'},
+    {"root_dir", required_argument, nullptr, 'd'},
     {0, 0, 0, 0}
   };
-  while((opt = getopt_long(argc, argv, "c:C:H:t:T:", long_options, &option_index)) != -1) {
+  while((opt = getopt_long(argc, argv, "c:C:H:t:T:d:", long_options, &option_index)) != -1) {
     switch(opt) {
     case 'c':
       channel = static_cast<unsigned int>(std::strtol(optarg, nullptr, 0));
@@ -265,21 +267,25 @@ int main(int argc, char *argv[])
       break;
     case 'H':
       heating_threshold = std::strtof(optarg, nullptr);
+      break;
     case 't':
       t_wait = std::strtof(optarg, nullptr);
       break;
     case 'T':
       tau_guess = std::strtof(optarg, nullptr);
+      break;
+    case 'd':
+      fileroot = std::string(optarg);
+      break;
     default:
       std::cout << "Usage: " << argv[0] << " [-c channel] [-C cooling_theshold] "
-		<< "[-H heating_threshold] [-t t_wait] [-T tau_guess]\n";
+		<< "[-H heating_threshold] [-t t_wait] [-T tau_guess] [-d root_dir]\n";
       return -1;
     }
   }
   CalibData calib_data;
   calib_data.channel = channel;
   // Read the data from transient output files
-  const std::string fileroot("/dev/acq400/data");
   calib_data.read_calib_data(fileroot);
   std::cout << "Successfully read " << calib_data.curr.size() << " samples\n";
   // Calculate calibration constants

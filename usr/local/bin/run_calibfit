@@ -63,6 +63,26 @@ do
         fit_cal_ch $ch
 done
 
+# Copy calib data so it doesn't get overwritten
+if [ $COPY_CALIB_DATA ]
+then
+    mkdir -p /tmp/calib_data
+    for ch in $BOLO_ACTIVE_CHAN
+    do
+        site=$(((ch - 1) / 8 + 1))
+        mkdir -p /tmp/calib_data/${site}
+        ubol_chan=$(((ch - 1) % 8 * 3 + 1))
+        phi_chan=$((ubol_chan + 1))
+        dc_chan=$((phi_chan + 1))
+        for chan in $ubol_chan $phi_chan $dc_chan
+        do
+            # 0-Pad to 2 digits
+            pad=$(printf "%02d" $chan)
+            cp /dev/acq400/data/${site}/${pad} /tmp/calib_data/${site}/${pad}
+        done
+    done
+fi
+
 for ch in $BOLO_ACTIVE_CHAN
 do
         fil_args=$(awk 'NR=='$ch' {print $0}' /tmp/senslogs.txt)
