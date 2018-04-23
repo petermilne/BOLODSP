@@ -2,6 +2,7 @@ KNOBDIR=/etc/acq400/14
 # Create the knobs and populate with sensible defaults
 echo 0.50 > ${KNOBDIR}/DIODE_DROP_V # Voltage drop across diodes
 echo 1000.0 > ${KNOBDIR}/FILTER_BANDWIDTH # Low-pass filter bandwidth
+echo 0.1 > ${KNOBDIR}/TWAIT # Wait time for offset measurement at calibration start
 echo 1.0 > ${KNOBDIR}/THEAT # Heating time for calibration
 echo 1.0 > ${KNOBDIR}/TCOOL # Cooling time for calibration
 echo 1.0 > ${KNOBDIR}/VBIAS # Bias voltage for heating in calibration

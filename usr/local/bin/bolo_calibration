@@ -9,6 +9,7 @@
 # Read calibration parameters from knobs stored here:
 KNOBDIR=/etc/acq400/14/
 cal_en=$(cat ${KNOBDIR}/CAL_EN)
+twait=$(cat ${KNOBDIR}/TWAIT)
 tcool=$(cat ${KNOBDIR}/TCOOL)
 theat=$(cat ${KNOBDIR}/THEAT)
 vbias=$(cat ${KNOBDIR}/VBIAS)
@@ -32,8 +33,8 @@ osdac_value=$(expect -c "puts [expr {int(${vbias}/15.0*2**15+$diode_drop)}]")
 osdac_hex=$(printf %04x $osdac_value)
 # Start data stream
 soft_trigger
-# Wait for 0.1s to allow an offset measurement to be made
-sleep 0.1
+# Wait for TWAIT to allow an offset measurement to be made
+sleep $twait
 # Set the bias voltage
 echo 0x${osdac_hex} > /dev/dsp1/OSDAC_REG_DATA
 # Wait for heating to equilibrium

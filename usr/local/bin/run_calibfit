@@ -9,6 +9,7 @@ cat - >/mnt/local/sysconfig/bolo.sh <<EOF
 BOLO_ACTIVE_CHAN="1 2 3 4 5 6 7 8"
 BOLO_VERBOSE=1
 set.site 14 DIODE_DROP_V ${1:-0.5}
+set.site 14 TWAIT ${2:-0.1}
 set.site 14 THEAT ${2:-1.0}
 set.site 14 TCOOL ${3:-1.0}
 set.site 14 VBIAS ${4:-1.0}
@@ -51,7 +52,11 @@ done
 
 reset.dsp
 
-set.site 0 'transient POST=21000 SOFT_TRIGGER=0; set_arm'
+tcool=$(set.site 14 TCOOL)
+theat=$(set.site 14 THEAT)
+twait=$(set.site 14 TWAIT)
+nsamples=$(expect -c "puts [expr { int(($tcool + $theat + $twait) * 1e4) }]")
+set.site 0 "transient POST=$nsamples SOFT_TRIGGER=0; set_arm"
 wait_until_state 1
 
 bolo_calibration
