@@ -9,6 +9,7 @@ cat - >/mnt/local/sysconfig/bolo.sh <<EOF
 BOLO_ACTIVE_CHAN="1 2 3 4 5 6 7 8"
 BOLO_VERBOSE=1
 set.site 14 DIODE_DROP_V ${1:-0.5}
+set.site 14 TWAIT ${2:-0.1}
 set.site 14 THEAT ${2:-1.0}
 set.site 14 TCOOL ${3:-1.0}
 set.site 14 VBIAS ${4:-1.0}
@@ -35,9 +36,9 @@ fit_cal_ch() {
 
         rv load_offset_channel.tcl $ch $i0 $q0 $sens
 
-        echo >>/tmp/calibfit.log load_offset_channel.tcl $ch $i0 $q0 $sens
+        echo >>/tmp/calibfit.log calibration_data $ch $i0 $q0 $sens $tau
 
-        echo $sens $tau >> /tmp/senslogs.txt
+        echo $ch $sens $tau >> /tmp/senslogs.txt
 }
 
 
@@ -51,7 +52,11 @@ done
 
 reset.dsp
 
-set.site 0 'transient POST=21000 SOFT_TRIGGER=0; set_arm'
+tcool=$(set.site 14 TCOOL)
+theat=$(set.site 14 THEAT)
+twait=$(set.site 14 TWAIT)
+nsamples=$(expect -c "puts [expr { int(($tcool + $theat + $twait) * 1e4) }]")
+set.site 0 "transient POST=$nsamples SOFT_TRIGGER=0; set_arm"
 wait_until_state 1
 
 bolo_calibration
@@ -63,12 +68,40 @@ do
         fit_cal_ch $ch
 done
 
+# Copy calib data so it doesn't get overwritten
+if [ $COPY_CALIB_DATA ]
+then
+    mkdir -p /tmp/calib_data
+    for ch in $BOLO_ACTIVE_CHAN
+    do
+        site=$(((ch - 1) / 8 + 1))
+        mkdir -p /tmp/calib_data/${site}
+        ubol_chan=$(((ch - 1) % 8 * 3 + 1))
+        phi_chan=$((ubol_chan + 1))
+        dc_chan=$((phi_chan + 1))
+        for chan in $ubol_chan $phi_chan $dc_chan
+        do
+            # 0-Pad to 2 digits
+            pad=$(printf "%02d" $chan)
+            cp /dev/acq400/data/${site}/${pad} /tmp/calib_data/${site}/${pad}
+        done
+    done
+fi
+
+# Start running data through the filters so we can load multiple power filters
+streamtonowhered start
+until set.site 0 transient_state | grep -qe ^1
+do
+    sleep 0.1
+done
+soft_trigger
 for ch in $BOLO_ACTIVE_CHAN
 do
-        fil_args=$(awk 'NR=='$ch' {print $0}' /tmp/senslogs.txt)
+        fil_args=$(awk '$1=='$ch' {print $2, $3}' /tmp/senslogs.txt)
         rv power_filter_design.tcl $ch $fil_args
-        rv /usr/local/bin/wait_for_filters
+        rv /usr/local/bin/wait_for_filters nospawn
 done
+streamtonowhered stop
 
 rm /tmp/senslogs.txt
 

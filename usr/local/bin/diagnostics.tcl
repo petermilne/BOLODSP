@@ -1,7 +1,13 @@
 #!/usr/local/bin/expect
 
+# Number of channels the BOLODSP FPGA module was built for
+set nchan 48
+# Each channel has I, Q, PI, PQ offsets
+set nvals [ expr { $nchan * 4 } ]
+# Each offset is 4 bytes
+set nbytes [ expr { $nvals * 4 } ]
 set fd [ open /dev/dsp1.3 r ]
-binary scan [ read $fd 768 ] i192 offsets
+binary scan [ read $fd $nbytes ] i${nvals} offsets
 close $fd
 
 
@@ -14,20 +20,21 @@ set offsets4 {}
 set offsets_full {}
 set channels {}
 
-for {set counter 1} {$counter < 13} {incr counter} {
-	lappend channels $counter
+# Should really loop up to $nchan, but fs2xml dies for more than 43 channels,
+# so trim it here until that's fixed
+for {set counter 1} {$counter <= 43} {incr counter} {
 	lappend channels $counter
 }
 
-for {set i 0} {$i < 24} {incr i} {
-	lappend offsets1 [ lindex $offlist $i ]
-	lappend offsets2 [ lindex $offlist [ expr $i+48 ] ]
-	lappend offsets3 [ lindex $offlist [ expr $i+96 ] ]
-	lappend offsets4 [ lindex $offlist [ expr $i+144 ] ]
+for {set i 0} {$i < 43} {incr i} {
+    lappend offsets1 [ lindex $offlist [ expr {2 * $i} ] ]
+    lappend offsets2 [ lindex $offlist [ expr {2 * $i + 1} ] ]
+    lappend offsets3 [ lindex $offlist [ expr {2 * ($i + $nchan)} ] ]
+    lappend offsets4 [ lindex $offlist [ expr {2 * ($i + $nchan) + 1} ] ]
 }
 
 set formatStr {%15s%20s%20s%17s%17s}
-puts [format $formatStr "Channel" "Voltage Offsets 1" "Voltage Offsets 2" "Power Offsets 1" "Power Offsets 2"]
+puts [format $formatStr "Channel" "Voltage Offsets I" "Voltage Offsets Q" "Power Offsets I" "Power Offsets Q"]
 
 puts [format $formatStr "---------------" "-------------------" "-------------------" "---------------" "---------------"]
 foreach channelsValue $channels offsets1Value $offsets1 offsets2Value $offsets2 offsets3Value $offsets3 offsets4Value $offsets4 {

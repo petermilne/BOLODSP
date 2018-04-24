@@ -6,6 +6,11 @@
 # To get data through, use streamtonowhered. Note however that this
 # will overwrite any previous transient capture data, so ensure that
 # this data is safely stored elsewhere before runing this script
+#
+# For improved efficiency when loading multiple filters, start at stream to
+# nowhere before running this script, and then pass "nospawn" as the first
+# argument to the script. This will bypass spawning a new streamtonowhered
+# process
 
 wait_until_filter_ready () {
     filter_status=$(set.site 14 FILTER_STATUS)
@@ -13,10 +18,18 @@ wait_until_filter_ready () {
     power_ready=$(((0x${filter_status}&0x10)>>4))
     if [ $voltage_ready -eq 0 -o $power_ready -eq 0 ]
     then
-        streamtonowhered start
-        sleep 1
-        soft_trigger
-    # Poll until the filters are ready
+        if [ "$1" != "nospawn" ]
+        then
+            streamtonowhered start
+            # Wait until armed
+            # Can't use wait_until_state 1 here, because it's not a transient capture
+            until set.site 0 transient_state | grep -qe "^1"
+            do
+                sleep 0.1
+            done
+            soft_trigger
+        fi
+        # Poll until the filters are ready
         while true
         do
             filter_status=$(set.site 14 FILTER_STATUS)
@@ -29,8 +42,8 @@ wait_until_filter_ready () {
                 sleep 0.5
             fi
         done
-        streamtonowhered stop
+        [ "$!" != "nospawn" ] && streamtonowhered stop
     fi
 }
 
-wait_until_filter_ready
+wait_until_filter_ready $1
