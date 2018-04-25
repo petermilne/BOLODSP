@@ -18,6 +18,8 @@ fi
 source /mnt/local/sysconfig/bolo.sh
 reset.dsp
 
+# Remove previous calibration results: we're only interested in the latest
+rm /tmp/calibfit.log
 
 
 rv() {
@@ -31,7 +33,7 @@ fit_cal_ch() {
 
         /usr/local/bin/calibfit -c $ch $CALIBFITARGS 2>&1 >/tmp/pgm_calibfit.txt
         [ $BOLO_VERBOSE ] && cat /tmp/pgm_calibfit.txt
-        cat /tmp/pgm_calibfit.txt | grep = | tr -d \  > /tmp/pgm_calibfit.sh
+        grep "=" /tmp/pgm_calibfit.txt | tr -d \  > /tmp/pgm_calibfit.sh
         source /tmp/pgm_calibfit.sh
 
         rv load_offset_channel.tcl $ch $i0 $q0 $sens
