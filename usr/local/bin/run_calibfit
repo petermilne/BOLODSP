@@ -58,6 +58,10 @@ tcool=$(set.site 14 TCOOL)
 theat=$(set.site 14 THEAT)
 twait=$(set.site 14 TWAIT)
 nsamples=$(expect -c "puts [expr { int(($tcool + $theat + $twait) * 1e4) }]")
+
+# System must be set up for soft trigger for calibration
+current_trg=$(set.site 1 trg | cut -d' ' -f1)
+set.site 1 trg=1,1,1
 set.site 0 "transient POST=$nsamples SOFT_TRIGGER=0; set_arm"
 wait_until_state 1
 
@@ -104,6 +108,9 @@ do
         rv /usr/local/bin/wait_for_filters nospawn
 done
 streamtonowhered stop
+
+# Restore previous triggering setup
+set.site 1 $current_trg
 
 rm /tmp/senslogs.txt
 
