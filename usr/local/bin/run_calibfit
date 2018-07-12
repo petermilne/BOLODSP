@@ -95,12 +95,12 @@ then
 fi
 
 # Start running data through the filters so we can load multiple power filters
+# Need to ensure that the system is set up to trigger automatically for this
+sysconf_file="/etc/sysconfig/acq400_streamd.0.conf"
+cp "$sysconf_file" "$sysconf_file"-before_run_calibfit
+cp /usr/local/CARE/acq400_streamd.0.conf-soft_trigger "$sysconf_file"
+
 streamtonowhered start
-until set.site 0 transient_state | grep -qe ^1
-do
-    sleep 0.1
-done
-soft_trigger
 for ch in $BOLO_ACTIVE_CHAN
 do
         fil_args=$(awk '$1=='$ch' {print $2, $3}' /tmp/senslogs.txt)
@@ -111,6 +111,7 @@ streamtonowhered stop
 
 # Restore previous triggering setup
 set.site 1 $orig_trg
+mv "$sysconf_file"-before_run_calibfit "$sysconf_file"
 
 rm /tmp/senslogs.txt
 
