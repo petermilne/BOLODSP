@@ -42,7 +42,7 @@ wait_until_filter_ready () {
                 sleep 0.5
             fi
         done
-        [ "$!" != "nospawn" ] && streamtonowhered stop
+        [ "$1" != "nospawn" ] && streamtonowhered stop
     fi
 }
 
