@@ -20,14 +20,13 @@ wait_until_filter_ready () {
     then
         if [ "$1" != "nospawn" ]
         then
+            # Start running data through the filters so we can load multiple power filters
+            # Need to ensure that the system is set up to trigger automatically for this
+            sysconf_file="/etc/sysconfig/acq400_streamd.0.conf"
+            cp "$sysconf_file" "$sysconf_file"-before_wait_for_filters
+            cp /usr/local/CARE/acq400_streamd.0.conf-soft_trigger "$sysconf_file"
+
             streamtonowhered start
-            # Wait until armed
-            # Can't use wait_until_state 1 here, because it's not a transient capture
-            until set.site 0 transient_state | grep -qe "^1"
-            do
-                sleep 0.1
-            done
-            soft_trigger
         fi
         # Poll until the filters are ready
         while true
@@ -42,7 +41,10 @@ wait_until_filter_ready () {
                 sleep 0.5
             fi
         done
-        [ "$!" != "nospawn" ] && streamtonowhered stop
+        if [ "$1" != "nospawn" ]; then
+            streamtonowhered stop
+            mv "$sysconf_file"-before_wait_for_filters "$sysconf_file"
+        fi
     fi
 }
 
