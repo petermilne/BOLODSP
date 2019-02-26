@@ -8,6 +8,11 @@ if [ ! -e /mnt/local/sysconfig/bolo.sh ]; then
 cat - >/mnt/local/sysconfig/bolo.sh <<EOF
 BOLO_ACTIVE_CHAN="1 2 3 4 5 6 7 8"
 BOLO_VERBOSE=1
+# to customize calibfit, change next line
+# eg CALIBFITARGS="-H 0.85"
+# available options:
+# -C cooling_theshold -H heating_threshold -t t_wait -T tau_guess
+CALIBFITARGS=""
 set.site 14 DIODE_DROP_V ${1:-0.5}
 set.site 14 TWAIT ${2:-0.1}
 set.site 14 THEAT ${2:-1.0}
@@ -21,6 +26,7 @@ reset.dsp
 # Remove previous calibration results: we're only interested in the latest
 rm /tmp/calibfit.log
 
+[ "$CALIBFITARGS" != "" ] && echo "custom CALIBFITARGS $CALIBFITARGS"
 
 rv() {
         [ $BOLO_VERBOSE ] && echo $*
