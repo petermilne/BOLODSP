@@ -1,4 +1,4 @@
-#!/usr/local/bin/tclsh8.6
+#!/usr/bin/expect
 
 # This script takes the cooling time and sensitivity from a calibration,
 # and designs a deconvolution filter for a given channel.
