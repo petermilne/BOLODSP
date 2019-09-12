@@ -7,6 +7,22 @@ Final packaging by Peter Milne.
 BOLODSP provides "calibration as a service", connect to port 0xb010 to run a
 calibration.
 
+Recommended Procedure: 
+Use HAPI: 
+git pull https://github.com/D-TACQ/acq400_hapi
+cd acq400_hapi; export PYTHONPATH=$PWD
+cd user_apps/special
+
+Calibrate:
+python bolo8_cal_cap_loop.py --cal=1 --cap=0 --shots=1 acq2106_059
+
+Capture:
+python bolo8_cal_cap_loop.py --cal=0 --cap=1 ---shots=1 acq2106_059
+
+Use cs-studio to view data:
+https://github.com/D-TACQ/ACQ400CSS
+Run BOLO8_LAUNCHER.opi, view BOLO FUNCTIONAL DATA directly
+
 
 For explanation of BOLO8, see
 https://github.com/jacklovell/bolodsp-doc/releases
