@@ -77,13 +77,14 @@ int32_v read_file(const std::string &filename, size_t nsam)
   // Convert to int32
   int32_t *bufptr = reinterpret_cast<int32_t *>(buffer.data());
   // Number of int32 samples is the number of bytes divided by the size of a sample
-  size_t nsamples = std::min(nsam, buffer.size() / sizeof(*bufptr));
+  size_t nsamples = buffer.size() / sizeof(*bufptr);
 
-  int32_v output(bufptr, bufptr + nsamples);
+  int32_v output(bufptr, bufptr + std::min(nsam, nsamples));
   return output;
 }
 
 int32_v CalibData::read_fun_data(enum FUN fun, unsigned long int nsam)
+/* returns integer data for function fun */
 {
   /* Calculate the logical channel numbers based on the physical channel
    * Each physical channel has 3 logical channels. Channels are grouped
@@ -100,9 +101,6 @@ int32_v CalibData::read_fun_data(enum FUN fun, unsigned long int nsam)
  * the data is stored in logical channels at the fileroot path */
 void CalibData::read_calib_data(const std::string &fileroot, unsigned long int nsam)
 {
-  /* Now we want to open the files and read all the data. Since the data is
-   * stored as 32-bit integers, we create an integer vector and read into this
-   * then apply the appropriate scaling to write into our CalibData struct */
   const int32_v ucal_rawdata = read_fun_data(F_MAG, nsam);
   const int32_v phical_rawdata = read_fun_data(F_PHI, nsam);
   const int32_v bias_rawdata = read_fun_data(F_BIAS, nsam);
@@ -112,18 +110,18 @@ void CalibData::read_calib_data(const std::string &fileroot, unsigned long int n
   phical.reserve(phical_rawdata.size());
   vdc.reserve(bias_rawdata.size());
   curr.reserve(bias_rawdata.size());
-  for(auto&& i: ucal_rawdata) {
-    ucal.push_back(i * ucal_scale);
+  for(auto&& raw: ucal_rawdata) {
+    ucal.push_back(raw * ucal_scale);
   }
-  for(auto&& i: phical_rawdata) {
-    phical.push_back(i * phical_scale);
+  for(auto&& raw: phical_rawdata) {
+    phical.push_back(raw * phical_scale);
   }
   /* For VDC and current, first extract the top 16 bits for VDC and bottom 16
    * bits for current, then multiply by the respective scale factors and copy
    * to the calib-data struct */
-  for(auto&& i: bias_rawdata) {
-    vdc.push_back((i>>16) * vdc_scale);
-    curr.push_back((i & 0x0000ffff) * curr_scale);
+  for(auto&& raw: bias_rawdata) {
+    vdc.push_back((raw>>16) * vdc_scale);
+    curr.push_back((raw & 0x0000ffff) * curr_scale);
   }
   // Add the calibration time vector, based on a sample rate of 10kSPS
   nsamples = ucal.size();
