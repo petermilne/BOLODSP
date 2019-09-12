@@ -96,22 +96,8 @@ int32_v CalibData::read_fun_data(enum FUN fun, unsigned long int nsam)
    return read_file(file.str(), nsam);
 }
 
-float scale_mult(int32_t xx, float kk)
-{
-   return xx * kk;
-}
-
-float scale_mult_hw(int32_t xx, float kk)
-{
-   return (xx>>16) * kk;
-}
-
-float scale_mult_lw(int32_t xx, float kk)
-{
-   return (xx&0x0000ffff) * kk;
-}
-
-void scale_data(float_v& yy, const int32_v& xx, float kk, float (*fn)(int32_t xx, float kk) = scale_mult)
+void scale_data(float_v& yy, const int32_v& xx, const float kk, 
+		float (*fn)(int32_t xx, const float kk) = [](int32_t xx, float kk) { return xx * kk; })
 {
    yy.reserve(xx.size());
    for (auto&& raw: xx) {
@@ -135,8 +121,8 @@ void CalibData::read_calib_data(const std::string &fileroot, unsigned long int n
   /* For VDC and current, first extract the top 16 bits for VDC and bottom 16
    * bits for current, then multiply by the respective scale factors and copy
    * to the calib-data struct */
-  scale_data(vdc, bias_rawdata, vdc_scale, scale_mult_hw);
-  scale_data(curr, bias_rawdata, curr_scale, scale_mult_lw);
+  scale_data(vdc, bias_rawdata, vdc_scale,   [](int32_t xx, const float kk) { return (xx>>16)*kk; });
+  scale_data(curr, bias_rawdata, curr_scale, [](int32_t xx, const float kk) { return (xx&0x0000ffff)*kk; });
   // Add the calibration time vector, based on a sample rate of 10kSPS
   nsamples = ucal.size();
   tcal.reserve(nsamples);
