@@ -2,7 +2,7 @@
 # lmfit is statically compiled into the final executable, so no extra library is needed
 # Ensure that arm-xilinx-linux-gnueabi-{gcc g++} are in PATH before calling
 
-CROSS_COMPILE=arm-xilinx-linux-gnueabi-
+CROSS_COMPILE=arm-linux-gnueabihf-
 CURR_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 LMDIR=$(CURR_DIR)/lmfit
 CFLAGS=-Wall -std=c99 -O3 -mcpu=cortex-a9 -mfpu=neon -ffast-math
