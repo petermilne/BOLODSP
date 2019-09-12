@@ -25,6 +25,8 @@ static constexpr float phical_scale = std::exp2(-29);
 static constexpr float vdc_scale = 1.25 / std::exp2(15);
 static constexpr float curr_scale = (128.0/100.0) * std::exp2(-12) * (25.0/3.0) / 1000.0;
 
+typedef std::vector<int32_t> int32_v;
+
 /* A struct to store the calibration data for a given channel and pulse */
 struct CalibData {
   // Setup data
@@ -36,7 +38,7 @@ struct CalibData {
   // Calculated calibration constants
   float sens, tau, a0, phi0, i0, q0;
   // Class functions
-  void read_calib_data(const std::string &fileroot);
+  void read_calib_data(const std::string &fileroot, unsigned long int nsam);
   void calc_cooling_period(float cooling_threshold, float t_wait);
   void calc_heating_period(float heating_threshold);
   void calc_sens(float ip0, float qp0);
@@ -48,7 +50,7 @@ typedef std::vector<int32_t> int32_v;
 /* This function reads the file "filename" and returns the read data as
  * a vector. It assumes the data is 4-byte signed integers, which is the
  * case for all the calibration data output from the FPGA */
-int32_v read_file(const std::string &filename)
+int32_v read_file(const std::string &filename, unsigned long int nsam)
 {
   std::ifstream instream(filename, std::ios::binary);
   /* Iterators for the start of the stream, and the end. The default
@@ -59,7 +61,8 @@ int32_v read_file(const std::string &filename)
   // Convert to int32
   int32_t *bufptr = reinterpret_cast<int32_t *>(buffer.data());
   // Number of int32 samples is the number of bytes divided by the size of a sample
-  size_t nsamples = buffer.size() / sizeof(*bufptr);
+  // nsamples is a user controllable value now. It defaults to 21000
+  size_t nsamples = nsam;
   int32_v output(bufptr, bufptr + nsamples);
   return output;
 }
@@ -68,7 +71,7 @@ int32_v read_file(const std::string &filename)
 /* This function reads all of the required data for the channel specified
  * in calib_data. It assumes a transient capture has been completed, and
  * the data is stored in logical channels at the fileroot path */
-void CalibData::read_calib_data(const std::string &fileroot)
+void CalibData::read_calib_data(const std::string &fileroot, unsigned long int nsam)
 {
   /* Calculate the logical channel numbers based on the physical channel
    * Each physical channel has 3 logical channels. Channels are grouped
@@ -88,9 +91,9 @@ void CalibData::read_calib_data(const std::string &fileroot)
   /* Now we want to open the files and read all the data. Since the data is
    * stored as 32-bit integers, we create an integer vector and read into this
    * then apply the appropriate scaling to write into our CalibData struct */
-  const int32_v ucal_rawdata = read_file(ucal_file.str());
-  const int32_v phical_rawdata = read_file(phical_file.str());
-  const int32_v bias_rawdata = read_file(bias_file.str());
+  const int32_v ucal_rawdata = read_file(ucal_file.str(), nsam);
+  const int32_v phical_rawdata = read_file(phical_file.str(), nsam);
+  const int32_v bias_rawdata = read_file(bias_file.str(), nsam);
   /* Multiply the raw voltage and phase values by their respective scale
    * factors, and insert the results into the calib_data struct */
   ucal.reserve(ucal_rawdata.size());
@@ -248,6 +251,7 @@ int main(int argc, char *argv[])
   float heating_threshold = 0.95;
   float t_wait = 0.2;
   float tau_guess = 0.2;
+  unsigned long int nsam = 21000;
   int opt = 0;
   int option_index = 0;
   std::string fileroot("/dev/acq400/data");
@@ -257,10 +261,11 @@ int main(int argc, char *argv[])
     {"heating_threshold", required_argument, nullptr, 'H'},
     {"t_wait", required_argument, nullptr, 't'},
     {"tau_guess", required_argument, nullptr, 'T'},
+    {"nsam", required_argument, nullptr, 'n'},
     {"root_dir", required_argument, nullptr, 'd'},
     {0, 0, 0, 0}
   };
-  while((opt = getopt_long(argc, argv, "c:C:H:t:T:d:", long_options, &option_index)) != -1) {
+  while((opt = getopt_long(argc, argv, "c:C:H:t:T:d:n:", long_options, &option_index)) != -1) {
     switch(opt) {
     case 'c':
       channel = static_cast<unsigned int>(std::strtol(optarg, nullptr, 0));
@@ -280,6 +285,9 @@ int main(int argc, char *argv[])
     case 'd':
       fileroot = std::string(optarg);
       break;
+    case 'n':
+      nsam = std::atol(optarg);
+      break;
     default:
       std::cout << "Usage: " << argv[0] << " [-c channel] [-C cooling_theshold] "
 		<< "[-H heating_threshold] [-t t_wait] [-T tau_guess] [-d root_dir]\n";
@@ -289,7 +297,7 @@ int main(int argc, char *argv[])
   CalibData calib_data;
   calib_data.channel = channel;
   // Read the data from transient output files
-  calib_data.read_calib_data(fileroot);
+  calib_data.read_calib_data(fileroot, nsam);
   std::cout << "Successfully read " << calib_data.curr.size() << " samples\n";
   // Calculate calibration constants
   calib_data.calc_cooling_period(cooling_threshold, t_wait);
