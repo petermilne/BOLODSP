@@ -2,4 +2,5 @@
 opkg
 release
 mnt/local/sean
-calibfit/lmfit*
+calibfit/lmfit
+calibfit/lmfit-6.1
