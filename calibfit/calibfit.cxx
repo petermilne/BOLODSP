@@ -16,56 +16,54 @@
  * Given by Z_30 = prod(i=1,30){sqrt(1 + 2**(-2*i))} */
 static constexpr float Z_30 = 1.16443535;
 
-/* Sample rate, used to relate time vector indices to values */
-static constexpr float deltat = 1.0e-4;
-
-// Raw data scalings
-static constexpr float ucal_scale = (1.25/std::exp2(24)) * (20.0/18.0) / Z_30;
-static constexpr float phical_scale = std::exp2(-29);
-static constexpr float vdc_scale = 1.25 / std::exp2(15);
-static constexpr float curr_scale = (128.0/100.0) * std::exp2(-12) * (25.0/3.0) / 1000.0;
-
 typedef std::vector<int32_t> int32_v;
 typedef std::vector<float> float_v;
 
 #define READALL 99999999
 
-/* each physical channel has 3 FUNction output. the 3rd is PWR in normal, BIAS in CAL */
+/* each physical channel has 3 FUNction outputs. the 3rd is PWR in normal, BIAS in CAL */
 enum FUN { F_MAG = 1, F_PHI = 2, F_PWR = 3, F_BIAS = 3 };
 
-/* A struct to store the calibration data for a given channel and pulse */
-struct CalibData {
+class CalibData {
   std::string &fileroot;
   // Setup data
-  unsigned int channel, nsamples;
+  unsigned channel, nsamples;
   const unsigned int site;
   std::string siteroot;
-  // Time-based data
+  // Time-series data
   float_v ucal, phical, vdc, curr, tcal;
   float_v ucool, phicool, tcool, currcool;
   float_v vdcheat, currheat;
+/* Sample rate 10kHz, deltat used to relate time vector indices to values */
+  static constexpr float deltat = 1.0e-4;
 
+/* Raw data scalings */
+  static constexpr float ucal_scale = (1.25/std::exp2(24)) * (20.0/18.0) / Z_30;
+  static constexpr float phical_scale = std::exp2(-29);
+  static constexpr float vdc_scale = 1.25 / std::exp2(15);
+  static constexpr float curr_scale = (128.0/100.0) * std::exp2(-12) * (25.0/3.0) / 1000.0;
 
+  int32_v read_fun_data(enum FUN fun, unsigned long int nsam);
+  void read_calib_data(unsigned long int nsam);
+
+public:
   // Calculated calibration constants
   float sens, tau, a0, phi0, i0, q0;
-  // Class functions
-  int32_v read_fun_data(enum FUN fun, unsigned long int nsam);
-  void read_calib_data(const std::string &fileroot, unsigned long int nsam);
+  // public member functions
   void calc_cooling_period(float cooling_threshold, float t_wait);
   void calc_heating_period(float heating_threshold);
   void calc_sens(float ip0, float qp0);
   void fit_cooling(float tau_guess);
-  CalibData(std::string &_fileroot, int _channel) : fileroot(_fileroot), channel(_channel),
+
+  CalibData(std::string &_fileroot, unsigned _channel, unsigned nsam) : fileroot(_fileroot), channel(_channel),
   	site(((channel-1)/8) + 1),
         siteroot(fileroot + "/" + std::to_string(site) + "/") {
+     read_calib_data(nsam);
   }
+
+  int size() { return curr.size(); }
 };
 
-
-
-/* This function reads the file "filename" and returns the read data as
- * a vector. It assumes the data is 4-byte signed integers, which is the
- * case for all the calibration data output from the FPGA */
 int32_v read_file(const std::string &filename, size_t nsam)
 {
   std::ifstream instream(filename, std::ios::binary);
@@ -105,10 +103,17 @@ void scale_data(float_v& yy, const int32_v& xx, const float kk,
    }
 }
 
+void fill_ramp(float_v& yy, unsigned nelems, float step) 
+{
+   yy.reserve(nelems);
+   for(unsigned ti=0; ti<nelems; ++ti) {
+      yy.push_back(ti * step);
+   }
+}
 /* This function reads all of the required data for the channel specified
  * in calib_data. It assumes a transient capture has been completed, and
- * the data is stored in logical channels at the fileroot path */
-void CalibData::read_calib_data(const std::string &fileroot, unsigned long int nsam)
+ * the data is stored in logical channels  */
+void CalibData::read_calib_data(unsigned long int nsam)
 {
   const int32_v ucal_rawdata = read_fun_data(F_MAG, nsam);
   const int32_v phical_rawdata = read_fun_data(F_PHI, nsam);
@@ -124,11 +129,7 @@ void CalibData::read_calib_data(const std::string &fileroot, unsigned long int n
   scale_data(vdc, bias_rawdata, vdc_scale,   [](int32_t xx, const float kk) { return (xx>>16)*kk; });
   scale_data(curr, bias_rawdata, curr_scale, [](int32_t xx, const float kk) { return (xx&0x0000ffff)*kk; });
   // Add the calibration time vector, based on a sample rate of 10kSPS
-  nsamples = ucal.size();
-  tcal.reserve(nsamples);
-  for(unsigned int ti=0; ti<nsamples; ++ti) {
-    tcal.push_back(ti * deltat);
-  }
+  fill_ramp(tcal, ucal.size(), deltat);
 }
 
 /* This function calculates the part of the calibration curve to use for fitting
@@ -149,7 +150,7 @@ void CalibData::calc_cooling_period(float cooling_threshold, float t_wait)
   if(tcool.size() == 0) {
     throw std::runtime_error("No cooling measured??"); // We need some cooling
   }
-  // Set tcool to start at zero, to simplify the fit
+  // Set tcool to start at zero, to simplify the fita @@todo seems redundant?
   const float cooling_start = tcool.front();
   for(auto&& n: tcool) {
     n -= cooling_start;
@@ -163,8 +164,7 @@ void CalibData::calc_heating_period(float heating_threshold)
   /* The current trace has a non-zero offset. We calculate the value at
    * zero current by taking the mean of the trace during cooling (when current=0) */
   const float current_offset = std::accumulate(currcool.begin(), currcool.end(), 0.0f) / currcool.size();
-  for(auto i=vdc.begin(), j=curr.begin();
-      i!=vdc.end(); ++i, ++j) {
+  for(auto i=vdc.begin(), j=curr.begin(); i!=vdc.end(); ++i, ++j) {
     /* Add elements of the calibration vectors to the corresponding heating
      * vectors, when heating is taking place */
     if(*i > heating_threshold) {
@@ -256,7 +256,7 @@ void CalibData::fit_cooling(float tau_guess)
 int main(int argc, char *argv[])
 {
   // Setup parameters - defaults first
-  unsigned int channel = 1;
+  unsigned channel = 1;
   float cooling_threshold = 0.001;
   float heating_threshold = 0.95;
   float t_wait = 0.2;
@@ -304,10 +304,9 @@ int main(int argc, char *argv[])
       return -1;
     }
   }
-  CalibData calib_data(fileroot, channel);
   // Read the data from transient output files
-  calib_data.read_calib_data(fileroot, nsam);
-  std::cout << "Successfully read " << calib_data.curr.size() << " samples\n";
+  CalibData calib_data(fileroot, channel, nsam);
+  std::cout << "Successfully read " << calib_data.size() << " samples\n";
   // Calculate calibration constants
   calib_data.calc_cooling_period(cooling_threshold, t_wait);
   calib_data.calc_heating_period(heating_threshold);
