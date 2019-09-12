@@ -2,7 +2,7 @@ BOLODSP:
 
 DSP automation routines for BOLO8.
 All math courtesy of Jack Lovell.
-Final packaging by Peter Milne.
+Test and customer support: Sean Alsop  info@d-tacq.com
 
 BOLODSP provides "calibration as a service", connect to port 0xb010 to run a
 calibration.
