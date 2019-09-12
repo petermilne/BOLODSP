@@ -23,6 +23,10 @@ fi
 source /mnt/local/sysconfig/bolo.sh
 reset.dsp
 
+# For non-default calibfit operation eg
+# calibfit [-C cooling_theshold] [-H heating_threshold] [-t t_wait] [-T tau_guess]
+# edit /mnt/local/sysconfig/bolo.sh to suit
+# CALIBFIT_ARGS="-H 0.85"
 # Remove previous calibration results: we're only interested in the latest
 rm /tmp/calibfit.log
 
@@ -35,9 +39,10 @@ rv() {
 
 fit_cal_ch() {
         ch=$1
+        nsam=$2
         [ $BOLO_VERBOSE ] && (echo;echo;echo "fit_cal_ch $ch")
 
-        /usr/local/bin/calibfit -c $ch $CALIBFITARGS 2>&1 >/tmp/pgm_calibfit.txt
+        /usr/local/bin/calibfit -n $nsam -c $ch $CALIBFITARGS 2>&1 >/tmp/pgm_calibfit.txt
         [ $BOLO_VERBOSE ] && cat /tmp/pgm_calibfit.txt
         grep "=" /tmp/pgm_calibfit.txt | tr -d \  > /tmp/pgm_calibfit.sh
         source /tmp/pgm_calibfit.sh
@@ -68,7 +73,8 @@ nsamples=$(expect -c "puts [expr { int(($tcool + $theat + $twait) * 1e4) }]")
 # System must be set up for soft trigger for calibration
 orig_trg=$(get.site 1 trg | cut -d' ' -f1)
 set.site 1 trg=1,1,1
-set.site 0 "transient POST=$nsamples SOFT_TRIGGER=0; set_arm"
+#set.site 0 "transient POST=$nsamples SOFT_TRIGGER=0; set_arm"
+set.site 0 "transient POST=100000 SOFT_TRIGGER=0; set_arm"
 wait_until_state 1
 
 bolo_calibration
@@ -77,7 +83,7 @@ reset.dsp
 
 for ch in $BOLO_ACTIVE_CHAN
 do
-        fit_cal_ch $ch
+        fit_cal_ch $ch $nsamples
 done
 
 # Copy calib data so it doesn't get overwritten
@@ -120,6 +126,6 @@ set.site 1 $orig_trg
 
 rm /tmp/senslogs.txt
 
-/usr/local/bin/web_diagnostics_cal
-/usr/local/bin/web_diagnostics_ram 
+/usr/local/bin/web_diagnostics_cal &
+/usr/local/bin/web_diagnostics_ram &
 echo "END"
