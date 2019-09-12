@@ -96,6 +96,29 @@ int32_v CalibData::read_fun_data(enum FUN fun, unsigned long int nsam)
    return read_file(file.str(), nsam);
 }
 
+float scale_mult(int32_t xx, float kk)
+{
+   return xx * kk;
+}
+
+float scale_mult_hw(int32_t xx, float kk)
+{
+   return (xx>>16) * kk;
+}
+
+float scale_mult_lw(int32_t xx, float kk)
+{
+   return (xx&0x0000ffff) * kk;
+}
+
+void scale_data(float_v& yy, const int32_v& xx, float kk, float (*fn)(int32_t xx, float kk) = scale_mult)
+{
+   yy.reserve(xx.size());
+   for (auto&& raw: xx) {
+      yy.push_back(fn(raw, kk));
+   }
+}
+
 /* This function reads all of the required data for the channel specified
  * in calib_data. It assumes a transient capture has been completed, and
  * the data is stored in logical channels at the fileroot path */
@@ -106,23 +129,14 @@ void CalibData::read_calib_data(const std::string &fileroot, unsigned long int n
   const int32_v bias_rawdata = read_fun_data(F_BIAS, nsam);
   /* Multiply the raw voltage and phase values by their respective scale
    * factors, and insert the results into the calib_data struct */
-  ucal.reserve(ucal_rawdata.size());
-  phical.reserve(phical_rawdata.size());
-  vdc.reserve(bias_rawdata.size());
-  curr.reserve(bias_rawdata.size());
-  for(auto&& raw: ucal_rawdata) {
-    ucal.push_back(raw * ucal_scale);
-  }
-  for(auto&& raw: phical_rawdata) {
-    phical.push_back(raw * phical_scale);
-  }
+  scale_data(ucal, ucal_rawdata, ucal_scale);
+  scale_data(phical, phical_rawdata, phical_scale);
+  
   /* For VDC and current, first extract the top 16 bits for VDC and bottom 16
    * bits for current, then multiply by the respective scale factors and copy
    * to the calib-data struct */
-  for(auto&& raw: bias_rawdata) {
-    vdc.push_back((raw>>16) * vdc_scale);
-    curr.push_back((raw & 0x0000ffff) * curr_scale);
-  }
+  scale_data(vdc, bias_rawdata, vdc_scale, scale_mult_hw);
+  scale_data(curr, bias_rawdata, curr_scale, scale_mult_lw);
   // Add the calibration time vector, based on a sample rate of 10kSPS
   nsamples = ucal.size();
   tcal.reserve(nsamples);
