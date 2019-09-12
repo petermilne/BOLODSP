@@ -45,6 +45,8 @@ struct CalibData {
   void fit_cooling(float tau_guess);
 };
 
+typedef std::vector<int32_t> int32_v;
+
 /* This function reads the file "filename" and returns the read data as
  * a vector. It assumes the data is 4-byte signed integers, which is the
  * case for all the calibration data output from the FPGA */
@@ -64,6 +66,7 @@ int32_v read_file(const std::string &filename, unsigned long int nsam)
   int32_v output(bufptr, bufptr + nsamples);
   return output;
 }
+
 
 /* This function reads all of the required data for the channel specified
  * in calib_data. It assumes a transient capture has been completed, and
