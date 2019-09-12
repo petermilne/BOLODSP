@@ -26,28 +26,42 @@ static constexpr float vdc_scale = 1.25 / std::exp2(15);
 static constexpr float curr_scale = (128.0/100.0) * std::exp2(-12) * (25.0/3.0) / 1000.0;
 
 typedef std::vector<int32_t> int32_v;
+typedef std::vector<float> float_v;
 
 #define READALL 99999999
 
+/* each physical channel has 3 FUNction output. the 3rd is PWR in normal, BIAS in CAL */
+enum FUN { F_MAG = 1, F_PHI = 2, F_PWR = 3, F_BIAS = 3 };
+
 /* A struct to store the calibration data for a given channel and pulse */
 struct CalibData {
+  std::string &fileroot;
   // Setup data
   unsigned int channel, nsamples;
+  const unsigned int site;
+  std::string siteroot;
   // Time-based data
-  std::vector<float> ucal, phical, vdc, curr, tcal;
-  std::vector<float> ucool, phicool, tcool, currcool;
-  std::vector<float> vdcheat, currheat;
+  float_v ucal, phical, vdc, curr, tcal;
+  float_v ucool, phicool, tcool, currcool;
+  float_v vdcheat, currheat;
+
+
   // Calculated calibration constants
   float sens, tau, a0, phi0, i0, q0;
   // Class functions
+  int32_v read_fun_data(enum FUN fun, unsigned long int nsam);
   void read_calib_data(const std::string &fileroot, unsigned long int nsam);
   void calc_cooling_period(float cooling_threshold, float t_wait);
   void calc_heating_period(float heating_threshold);
   void calc_sens(float ip0, float qp0);
   void fit_cooling(float tau_guess);
+  CalibData(std::string &_fileroot, int _channel) : fileroot(_fileroot), channel(_channel),
+  	site(((channel-1)/8) + 1),
+        siteroot(fileroot + "/" + std::to_string(site) + "/") {
+  }
 };
 
-typedef std::vector<int32_t> int32_v;
+
 
 /* This function reads the file "filename" and returns the read data as
  * a vector. It assumes the data is 4-byte signed integers, which is the
@@ -69,33 +83,29 @@ int32_v read_file(const std::string &filename, size_t nsam)
   return output;
 }
 
+int32_v CalibData::read_fun_data(enum FUN fun, unsigned long int nsam)
+{
+  /* Calculate the logical channel numbers based on the physical channel
+   * Each physical channel has 3 logical channels. Channels are grouped
+   * into 8 per site. Sites and channels are indexed from 1 */
+   int dchan = ((channel-1)%8) * 3 + fun;
+   std::ostringstream file;
+
+   file << siteroot << std::setw(2) << std::setfill('0') << dchan;
+   return read_file(file.str(), nsam);
+}
 
 /* This function reads all of the required data for the channel specified
  * in calib_data. It assumes a transient capture has been completed, and
  * the data is stored in logical channels at the fileroot path */
 void CalibData::read_calib_data(const std::string &fileroot, unsigned long int nsam)
 {
-  /* Calculate the logical channel numbers based on the physical channel
-   * Each physical channel has 3 logical channels. Channels are grouped
-   * into 8 per site. Sites and channels are indexed from 1 */
-  const unsigned int site = (channel - 1) / 8 + 1;
-  const unsigned int ucal_chan = ((channel - 1) % 8) * 3 + 1;
-  const unsigned int phical_chan = ((channel - 1) % 8) * 3 + 2;
-  const unsigned int bias_chan = ((channel - 1) % 8) * 3 + 3; // Stores VDC and current
-  /* The filename is fileroot/site/chan, with chan padded to 2 digits
-   * Use stringstreams to implement the padding, since they are safer than
-   * sprintf (no buffer overflow) */
-  std::string siteroot(fileroot + "/" + std::to_string(site) + "/");
-  std::ostringstream ucal_file, phical_file, bias_file;
-  ucal_file << siteroot << std::setw(2) << std::setfill('0') << ucal_chan;
-  phical_file << siteroot << std::setw(2) << std::setfill('0') << phical_chan;
-  bias_file << siteroot << std::setw(2) << std::setfill('0') << bias_chan;
   /* Now we want to open the files and read all the data. Since the data is
    * stored as 32-bit integers, we create an integer vector and read into this
    * then apply the appropriate scaling to write into our CalibData struct */
-  const int32_v ucal_rawdata = read_file(ucal_file.str(), nsam);
-  const int32_v phical_rawdata = read_file(phical_file.str(), nsam);
-  const int32_v bias_rawdata = read_file(bias_file.str(), nsam);
+  const int32_v ucal_rawdata = read_fun_data(F_MAG, nsam);
+  const int32_v phical_rawdata = read_fun_data(F_PHI, nsam);
+  const int32_v bias_rawdata = read_fun_data(F_BIAS, nsam);
   /* Multiply the raw voltage and phase values by their respective scale
    * factors, and insert the results into the calib_data struct */
   ucal.reserve(ucal_rawdata.size());
@@ -178,7 +188,7 @@ void CalibData::calc_sens(float ip0, float qp0)
 {
   /* The sensitivity is simply the height divided by the input power. Average
    * the input power over the whole heating period */
-  std::vector<float> p_heat(vdcheat.size());
+  float_v p_heat(vdcheat.size());
   // P = 2 * IV, since we measure the current through only one resistor
   std::transform(currheat.begin(), currheat.end(),
 		 vdcheat.begin(), p_heat.begin(),
@@ -202,8 +212,8 @@ double fcool(double t, const double *p)
 void CalibData::fit_cooling(float tau_guess)
 {
   // We need to fit to Cartesian cooling curves
-  std::vector<float> icool(ucool.size());
-  std::vector<float> qcool(ucool.size());
+  float_v icool(ucool.size());
+  float_v qcool(ucool.size());
   // I = A cos(phi)
   std::transform(ucool.begin(), ucool.end(),
 		 phicool.begin(), icool.begin(),
@@ -270,7 +280,7 @@ int main(int argc, char *argv[])
   while((opt = getopt_long(argc, argv, "c:C:H:t:T:d:n:", long_options, &option_index)) != -1) {
     switch(opt) {
     case 'c':
-      channel = static_cast<unsigned int>(std::strtol(optarg, nullptr, 0));
+      channel = std::strtoul(optarg, nullptr, 0);
       break;
     case 'C':
       cooling_threshold = std::strtof(optarg, nullptr);
@@ -296,8 +306,7 @@ int main(int argc, char *argv[])
       return -1;
     }
   }
-  CalibData calib_data;
-  calib_data.channel = channel;
+  CalibData calib_data(fileroot, channel);
   // Read the data from transient output files
   calib_data.read_calib_data(fileroot, nsam);
   std::cout << "Successfully read " << calib_data.curr.size() << " samples\n";
