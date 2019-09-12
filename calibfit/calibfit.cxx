@@ -27,6 +27,8 @@ static constexpr float curr_scale = (128.0/100.0) * std::exp2(-12) * (25.0/3.0) 
 
 typedef std::vector<int32_t> int32_v;
 
+#define READALL 99999999
+
 /* A struct to store the calibration data for a given channel and pulse */
 struct CalibData {
   // Setup data
@@ -50,7 +52,7 @@ typedef std::vector<int32_t> int32_v;
 /* This function reads the file "filename" and returns the read data as
  * a vector. It assumes the data is 4-byte signed integers, which is the
  * case for all the calibration data output from the FPGA */
-int32_v read_file(const std::string &filename, unsigned long int nsam)
+int32_v read_file(const std::string &filename, size_t nsam)
 {
   std::ifstream instream(filename, std::ios::binary);
   /* Iterators for the start of the stream, and the end. The default
@@ -61,8 +63,8 @@ int32_v read_file(const std::string &filename, unsigned long int nsam)
   // Convert to int32
   int32_t *bufptr = reinterpret_cast<int32_t *>(buffer.data());
   // Number of int32 samples is the number of bytes divided by the size of a sample
-  // nsamples is a user controllable value now. It defaults to 21000
-  size_t nsamples = nsam;
+  size_t nsamples = std::min(nsam, buffer.size() / sizeof(*bufptr));
+
   int32_v output(bufptr, bufptr + nsamples);
   return output;
 }
@@ -251,7 +253,7 @@ int main(int argc, char *argv[])
   float heating_threshold = 0.95;
   float t_wait = 0.2;
   float tau_guess = 0.2;
-  unsigned long int nsam = 21000;
+  unsigned long int nsam = READALL;
   int opt = 0;
   int option_index = 0;
   std::string fileroot("/dev/acq400/data");
