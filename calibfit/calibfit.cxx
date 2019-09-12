@@ -25,6 +25,8 @@ static constexpr float phical_scale = std::exp2(-29);
 static constexpr float vdc_scale = 1.25 / std::exp2(15);
 static constexpr float curr_scale = (128.0/100.0) * std::exp2(-12) * (25.0/3.0) / 1000.0;
 
+typedef std::vector<int32_t> int32_v;
+
 /* A struct to store the calibration data for a given channel and pulse */
 struct CalibData {
   // Setup data
@@ -46,7 +48,7 @@ struct CalibData {
 /* This function reads the file "filename" and returns the read data as
  * a vector. It assumes the data is 4-byte signed integers, which is the
  * case for all the calibration data output from the FPGA */
-std::vector<int32_t> read_file(const std::string &filename, unsigned long int nsam)
+int32_v read_file(const std::string &filename, unsigned long int nsam)
 {
   std::ifstream instream(filename, std::ios::binary);
   /* Iterators for the start of the stream, and the end. The default
@@ -59,7 +61,7 @@ std::vector<int32_t> read_file(const std::string &filename, unsigned long int ns
   // Number of int32 samples is the number of bytes divided by the size of a sample
   // nsamples is a user controllable value now. It defaults to 21000
   size_t nsamples = nsam;
-  std::vector<int32_t> output(bufptr, bufptr + nsamples);
+  int32_v output(bufptr, bufptr + nsamples);
   return output;
 }
 
@@ -86,9 +88,9 @@ void CalibData::read_calib_data(const std::string &fileroot, unsigned long int n
   /* Now we want to open the files and read all the data. Since the data is
    * stored as 32-bit integers, we create an integer vector and read into this
    * then apply the appropriate scaling to write into our CalibData struct */
-  const std::vector<int32_t> ucal_rawdata = read_file(ucal_file.str(), nsam);
-  const std::vector<int32_t> phical_rawdata = read_file(phical_file.str(), nsam);
-  const std::vector<int32_t> bias_rawdata = read_file(bias_file.str(), nsam);
+  const int32_v ucal_rawdata = read_file(ucal_file.str(), nsam);
+  const int32_v phical_rawdata = read_file(phical_file.str(), nsam);
+  const int32_v bias_rawdata = read_file(bias_file.str(), nsam);
   /* Multiply the raw voltage and phase values by their respective scale
    * factors, and insert the results into the calib_data struct */
   ucal.reserve(ucal_rawdata.size());
@@ -281,7 +283,7 @@ int main(int argc, char *argv[])
       fileroot = std::string(optarg);
       break;
     case 'n':
-      nsam = std::strtof(optarg, nullptr);
+      nsam = std::atol(optarg);
       break;
     default:
       std::cout << "Usage: " << argv[0] << " [-c channel] [-C cooling_theshold] "
