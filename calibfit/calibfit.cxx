@@ -43,10 +43,12 @@ struct CalibData {
   void fit_cooling(float tau_guess);
 };
 
+typedef std::vector<int32_t> int32_v;
+
 /* This function reads the file "filename" and returns the read data as
  * a vector. It assumes the data is 4-byte signed integers, which is the
  * case for all the calibration data output from the FPGA */
-std::vector<int32_t> read_file(const std::string &filename)
+int32_v read_file(const std::string &filename)
 {
   std::ifstream instream(filename, std::ios::binary);
   /* Iterators for the start of the stream, and the end. The default
@@ -58,9 +60,10 @@ std::vector<int32_t> read_file(const std::string &filename)
   int32_t *bufptr = reinterpret_cast<int32_t *>(buffer.data());
   // Number of int32 samples is the number of bytes divided by the size of a sample
   size_t nsamples = buffer.size() / sizeof(*bufptr);
-  std::vector<int32_t> output(bufptr, bufptr + nsamples);
+  int32_v output(bufptr, bufptr + nsamples);
   return output;
 }
+
 
 /* This function reads all of the required data for the channel specified
  * in calib_data. It assumes a transient capture has been completed, and
@@ -85,9 +88,9 @@ void CalibData::read_calib_data(const std::string &fileroot)
   /* Now we want to open the files and read all the data. Since the data is
    * stored as 32-bit integers, we create an integer vector and read into this
    * then apply the appropriate scaling to write into our CalibData struct */
-  const std::vector<int32_t> ucal_rawdata = read_file(ucal_file.str());
-  const std::vector<int32_t> phical_rawdata = read_file(phical_file.str());
-  const std::vector<int32_t> bias_rawdata = read_file(bias_file.str());
+  const int32_v ucal_rawdata = read_file(ucal_file.str());
+  const int32_v phical_rawdata = read_file(phical_file.str());
+  const int32_v bias_rawdata = read_file(bias_file.str());
   /* Multiply the raw voltage and phase values by their respective scale
    * factors, and insert the results into the calib_data struct */
   ucal.reserve(ucal_rawdata.size());
