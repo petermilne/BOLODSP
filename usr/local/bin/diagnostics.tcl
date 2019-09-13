@@ -1,7 +1,18 @@
 #!/usr/local/bin/expect
 
 # Number of channels the BOLODSP FPGA module was built for
-set nchan 48
+
+proc get_nchan {} {
+	set fp [open /etc/acq400/0/aggregator r]
+	set aggstr [gets $fp]
+	close $fp
+	regexp {sites=([1-6,]+)} $aggstr nc sites
+	set sn [split $sites ,]
+	return [expr [llength $sn] * 8 ]
+}
+
+set nchan [get_nchan]
+
 # Each channel has I, Q, PI, PQ offsets
 set nvals [ expr { $nchan * 4 } ]
 # Each offset is 4 bytes
@@ -20,13 +31,8 @@ set offsets4 {}
 set offsets_full {}
 set channels {}
 
-# Should really loop up to $nchan, but fs2xml dies for more than 43 channels,
-# so trim it here until that's fixed
-for {set counter 1} {$counter <= 43} {incr counter} {
-	lappend channels $counter
-}
-
-for {set i 0} {$i < 43} {incr i} {
+for {set i 0} {$i < $nchan} {incr i} {
+    lappend channels [expr $i + 1]
     lappend offsets1 [ lindex $offlist [ expr {2 * $i} ] ]
     lappend offsets2 [ lindex $offlist [ expr {2 * $i + 1} ] ]
     lappend offsets3 [ lindex $offlist [ expr {2 * ($i + $nchan)} ] ]
