@@ -19,7 +19,7 @@ static constexpr float Z_30 = 1.16443535;
 typedef std::vector<int32_t> int32_v;
 typedef std::vector<float> float_v;
 
-#define READALL 99999999
+#define READALL 100000		// 100K is equivalent to infinity as far as we're concerned
 
 /* each physical channel has 3 FUNction outputs. the 3rd is PWR in normal, BIAS in CAL */
 enum FUN { F_MAG = 1, F_PHI = 2, F_PWR = 3, F_BIAS = 3 };
@@ -74,8 +74,7 @@ int32_v read_file(const std::string &filename, size_t nsam)
   std::vector<char> buffer(start, end);
   // Convert to int32
   int32_t *bufptr = reinterpret_cast<int32_t *>(buffer.data());
-  // Number of int32 samples is the number of bytes divided by the size of a sample
-  size_t nsamples = buffer.size() / sizeof(*bufptr);
+  size_t nsamples = buffer.size() / sizeof(int32_t);
 
   int32_v output(bufptr, bufptr + std::min(nsam, nsamples));
   return output;
