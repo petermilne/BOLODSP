@@ -126,6 +126,6 @@ set.site 1 $orig_trg
 
 rm /tmp/senslogs.txt
 
-/usr/local/bin/web_diagnostics_cal &
-/usr/local/bin/web_diagnostics_ram &
+/usr/local/bin/web_diagnostics_cal
+/usr/local/bin/web_diagnostics_ram
 echo "END"

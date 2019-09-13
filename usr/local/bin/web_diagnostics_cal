@@ -18,17 +18,14 @@ a       <li><a title="'$DEV'" href="acq_info_page.html">'$DEV'</a></li>
 fi
 }
 
-monitor() {
-        
-        
+monitor_once() {        
 	[ $ADDED_WEB -eq 0 ] && add_web
-	/usr/local/bin/web_cal_data.tcl |  fs2xml -o /dev/shm/$XMLNAME.xml -k ''
-	sleep 1
-        
+	export ROW_LIMIT=0
+	/usr/local/bin/web_cal_data.tcl |  fs2xml -o /dev/shm/$XMLNAME.xml -k ''        
 }
 
 if [ "$(basename $0)" = "web_diagnostics_cal" ]; then
-  monitor
+  monitor_once
 fi
 
 

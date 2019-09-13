@@ -37,21 +37,15 @@ a       <li><a title="'$DEV'" href="acq_info_page.html">'$DEV'</a></li>
 fi
 }
 
-monitor() {
-        while [ 1 ]
-        do
-                [ $ADDED_WEB -eq 0 ] && add_web
-                # dump_regs | fs2xml --kvp -o /dev/shm/$XMLNAME.xml -s $C4R48
-		
+monitor_once() {
+        [ $ADDED_WEB -eq 0 ] && add_web
+        export ROW_LIMIT=0
 		/usr/local/bin/diagnostics.tcl | \
 			fs2xml -o /dev/shm/$XMLNAME.xml -k ''
-		
-		break
-        done
 }
 
 if [ "$(basename $0)" = "web_diagnostics_ram" ]; then
-	monitor
+	monitor_once
 fi
 
 
