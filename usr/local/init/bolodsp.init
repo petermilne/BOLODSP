@@ -2,6 +2,11 @@
 
 CUSTOM=/mnt/local/sysconfig/bolodsp.sh
 
+if [ ! -e /etc/sites ]; then
+	echo "ERROR: /etc/sites does not exist. FPGA not loaded, quit"
+	exit 1
+fi
+
 [ -e $CUSTOM ] && source $CUSTOM
 
 MDIR=/usr/local/lib/modules
