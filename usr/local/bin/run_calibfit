@@ -29,7 +29,7 @@ reset.dsp
 # edit /mnt/local/sysconfig/bolo.sh to suit
 # CALIBFIT_ARGS="-H 0.85"
 # Remove previous calibration results: we're only interested in the latest
-rm /tmp/calibfit.log
+rm -f /tmp/calibfit.log
 
 [ "$CALIBFITARGS" != "" ] && echo "custom CALIBFITARGS $CALIBFITARGS"
 

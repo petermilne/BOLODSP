@@ -1,6 +1,7 @@
 Build lmfit like this:
 
-wget http://apps.jcns.fz-juelich.de/src/lmfit/lmfit-6.1.tgz
+visit https://jugit.fz-juelich.de/mlz/lmfit. get .targ.gz
+
 tar xvzf lmfit-6.1.tgz 
 cd lmfit-6.1/
 ./configure --host=arm-xilinx-linux-gnueabi
