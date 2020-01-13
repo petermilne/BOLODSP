@@ -10,9 +10,7 @@
 # and the step size, and the output frequency is determined by the rate at which
 # the accumulator loops (as determined by the bit width) and the step size.
 
-# N.B. Ideally there would be a way of determining which AXI clock frequency was
-# being used at runtime. But for now it can be changed here if needed:
-set fclk 1e8; # 1.25e8 on newer systems
+set fclk 1.25e8; 
 
 if { $argc != 1 } {
     puts "Usage: $argv0 <fdrive>"

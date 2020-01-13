@@ -1,8 +1,5 @@
 #!/bin/sh
 # Set up the DSP
-# Uncomment the following line if using a newer FSBL with 125MHz
-# AXI clock, to ensure the drive frequency generation is correct
-sed -i 's/set fclk 1e8/set fclk 1.25e8/g' /usr/local/bin/set.fdrive
 set.fdrive 18e3
 
 # Turn all the gains up to 1V25, since bolometer signals are always small
