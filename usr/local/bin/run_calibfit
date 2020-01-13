@@ -18,6 +18,7 @@ set.site 14 TWAIT ${2:-0.1}
 set.site 14 THEAT ${2:-1.0}
 set.site 14 TCOOL ${3:-1.0}
 set.site 14 VBIAS ${4:-1.0}
+LOAD_POWER_FILTERS=1
 EOF
 fi
 source /mnt/local/sysconfig/bolo.sh
@@ -106,6 +107,7 @@ then
     done
 fi
 
+if [ $LOAD_POWER_FILTERS ]; then
 # Start running data through the filters so we can load multiple power filters
 streamtonowhered start
 until set.site 0 transient_state | grep -qe ^1
@@ -120,6 +122,7 @@ do
         rv /usr/local/bin/wait_for_filters nospawn
 done
 streamtonowhered stop
+fi
 
 # Restore previous triggering setup
 set.site 1 $orig_trg
