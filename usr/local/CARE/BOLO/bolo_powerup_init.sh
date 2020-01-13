@@ -5,8 +5,6 @@
 sed -i 's/set fclk 1e8/set fclk 1.25e8/g' /usr/local/bin/set.fdrive
 set.fdrive 18e3
 
-(
-/usr/local/epics/scripts/wait_ioc_ready
 # Turn all the gains up to 1V25, since bolometer signals are always small
 hostname=$(hostname)
 echo "Setting gains to 1V25"
@@ -24,8 +22,9 @@ done
 
 # Set internal rising edge trigger
 set.site 1 trg=1,1,1
-# 1MHz sample clock (divide from 100MHz internal clock)
-set.site 1 clkdiv=100
+# 1MHz sample clock set with role - ROLE=fpmaster for front panel clk
+set.site 0 sync_role ${ROLE:-master} 1M ${FIN:-} TRG:DX=d1 CLKDIV=1
+
 run0 1,2,3,4
 
 # Reset offset DACs. They seem to be confused by the switch to sideport control,
@@ -43,5 +42,4 @@ soft_trigger
 sleep 1
 /usr/local/bin/streamtonowhered stop
 #/usr/local/bin/web_diagnostics_ram
-) &
 
