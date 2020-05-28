@@ -20,7 +20,8 @@ if { $argc != 1 } {
 set fdrive [ expr { [lindex $argv 0] } ]
 set acc_width 27; # Number of bits in FPGA accumulator
 set step [ expr { $fdrive * 2.0**$acc_width / $fclk } ]
+set istep [ expr int($step) ]
 # The step size to the step size register
 set fd [ open /dev/dsp1/STEP_SIZE w ]
-puts $fd $step
+puts $fd $istep
 close $fd
