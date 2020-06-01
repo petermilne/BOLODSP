@@ -1,10 +1,12 @@
 # bolo8dsp-regdef : bolometer DSP register definitions
 # NB: use spaces
 DSP_RESET      0x000 0x00000001 rw %d
+DSP_BYPASS     0x000 0x00010000 rw %d
 STEP_SIZE      0x004 0x0000ffff rw %d
 CALIBRATION    0x008 0x00000001 rw %d
 OSDAC_REG_DATA 0x00c 0x0000ffff rw %x
 DIODE_DROP     0x010 0x0000ffff rw %d
 ACTIVE_CHAN    0x014 0x000000ff r  %d
+DAC_EXCITE_AMP 0x018 0x00000003 rw %d
 FPGA_VERSION   0x100 0xffffffff r  %x
 FILTER_STATUS  0x104 0x00000fff r  %x
