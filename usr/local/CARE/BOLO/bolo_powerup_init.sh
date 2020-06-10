@@ -22,7 +22,6 @@ set.site 1 trg=1,1,1
 # 1MHz sample clock set with role - ROLE=fpmaster for front panel clk
 set.site 0 sync_role ${ROLE:-master} 1M ${FIN:-} TRG:DX=d1 CLKDIV=1
 
-run0 1,2,3,4
 
 # Reset offset DACs. They seem to be confused by the switch to sideport control,
 # or possibly initialising EPICS
