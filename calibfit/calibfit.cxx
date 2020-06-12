@@ -12,6 +12,8 @@
 #include <getopt.h>
 #include "lmfit/lib/lmcurve.h"
 
+#include <stdlib.h>
+
 /* CORDIC scale factor for 32 bit data (nbits-2 according to Xilinx)
  * Given by Z_30 = prod(i=1,30){sqrt(1 + 2**(-2*i))} */
 static constexpr float Z_30 = 1.16443535;
@@ -23,6 +25,9 @@ typedef std::vector<float> float_v;
 
 /* each physical channel has 3 FUNction outputs. the 3rd is PWR in normal, BIAS in CAL */
 enum FUN { F_MAG = 1, F_PHI = 2, F_PWR = 3, F_BIAS = 3 };
+
+
+
 
 class CalibData {
   std::string &fileroot;
@@ -37,8 +42,10 @@ class CalibData {
 /* Sample rate 10kHz, deltat used to relate time vector indices to values */
   static constexpr float deltat = 1.0e-4;
 
+
+
 /* Raw data scalings */
-  static constexpr float ucal_scale = (1.25/std::exp2(24)) * (20.0/18.0) / Z_30;
+  static const float ucal_scale;
   static constexpr float phical_scale = std::exp2(-29);
   static constexpr float vdc_scale = 1.25 / std::exp2(15);
   static constexpr float curr_scale = (128.0/100.0) * std::exp2(-12) * (25.0/3.0) / 1000.0;
@@ -63,6 +70,17 @@ public:
 
   int size() { return curr.size(); }
 };
+
+static const float get_excitev() {
+	  const char* val = ::getenv("CALIBFIT_EXCITEV");
+	  if (val){
+		  return atof(val);
+	  }else{
+		  return 18.0f;
+	  }
+  }
+
+const float CalibData::ucal_scale = (1.25/std::exp2(24)) * (20.0/::get_excitev()) / Z_30;
 
 int32_v read_file(const std::string &filename, size_t nsam)
 {

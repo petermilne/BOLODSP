@@ -5,9 +5,21 @@ set.fdrive 18e3
 CUSTOM=/mnt/local/sysconfig/bolo.sh
 if [ -e $CUSTOM ]; then
 	source $CUSTOM
-	if [ "x$DAC_EXCITE_AMP" != "x" ]; then
-		set.site 14 DAC_EXCITE_AMP=$DAC_EXCITE_AMP
-	fi
+	case $CALIBFIT_EXCITEV in
+	18.0)
+		DAC_EXCITE_AMP=3;;
+	15.0)
+		DAC_EXITE_AMP=2;;
+	12.0)
+		DAC_EXITE_AMP=1;;
+	9.0)
+		DAC_EXCITE_AMP=0;;
+	*)
+		echo "WARNING: CALIBFIT_EXCITEV not specified, setting 9.0"
+		DAC_EXCITE_AMP=0;;
+	esac
+
+	set.site 14 DAC_EXCITE_AMP=$DAC_EXCITE_AMP
 fi
 # Turn all the gains up to 1V25, since bolometer signals are always small
 hostname=$(hostname)
