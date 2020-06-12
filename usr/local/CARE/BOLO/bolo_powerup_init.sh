@@ -2,6 +2,13 @@
 # Set up the DSP
 set.fdrive 18e3
 
+CUSTOM=/mnt/local/sysconfig/bolo.sh
+if [ -e $CUSTOM ]; then
+	source $CUSTOM
+	if [ "x$DAC_EXCITE_AMP" != "x" ]; then
+		set.site 14 DAC_EXCITE_AMP=$DAC_EXCITE_AMP
+	fi
+fi
 # Turn all the gains up to 1V25, since bolometer signals are always small
 hostname=$(hostname)
 echo "Setting gains to 1V25"

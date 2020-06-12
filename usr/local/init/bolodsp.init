@@ -1,13 +1,9 @@
 #!/bin/sh
 
-CUSTOM=/mnt/local/sysconfig/bolodsp.sh
-
 if [ ! -e /etc/sites ]; then
 	echo "ERROR: /etc/sites does not exist. FPGA not loaded, quit"
 	exit 1
 fi
-
-[ -e $CUSTOM ] && source $CUSTOM
 
 MDIR=/usr/local/lib/modules
 for site in /dev/sites/[1-6]
@@ -117,10 +113,14 @@ cat - >/etc/inetd.bolo.conf <<EOF
 45072 stream tcp nowait root run_calibfit run_calibfit
 EOF
 
+
+
 inetd /etc/inetd.bolo.conf
 
 # RECOMMEND: create /mnt/local/sysconfig/bolo.sh
 #BOLO_ACTIVE_CHAN="1 2 3 4 5 6 7 8"
 #BOLO_ACTIVE_CHAN=2
 #BOLO_VERBOSE=1
+#DAC_EXCITE_AMP=3
+
 
