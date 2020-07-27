@@ -41,6 +41,8 @@ let ncr=$NCHAN
 let site=1
 while [ $ncr -gt 0 ]; do
 	let ncx=$(cat /etc/acq400/$site/NCHAN)
+	# new straight thru FW has FASTAI, SLOWAI on "16CH"
+	[ $ncx -eq 16 ] && ncx=$(($ncx/2)) 
 	# update to effective number of channels
 	let encx="$ncx*$NCM"
 	echo "Allocating site $site ncx=$ncx encx=$encx"
