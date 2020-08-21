@@ -5,6 +5,9 @@ set file [ open "/tmp/calibfit.log" "r" ]
 set data [ read $file ]
 set formatted_data [ split $data ]
 
+set SENS_MIN $::env(SENS_MIN)
+set SENS_MAX $::env(SENS_MAX)
+
 set ch {}
 set i0 {}
 set q0 {}
@@ -24,9 +27,11 @@ for {set i 0} {$i <= [  llength $formatted_data ]} {incr i 5} {
 		set _sens    [format {%.3f} [ lindex $formatted_data [ expr $i+3 ] ] ]
 	        lappend sens $_sens
 	        lappend tau  [format {%.3f} [ lindex $formatted_data [ expr $i+4 ] ] ]
-		if { $_sens >= 1 && $_sens <= 10 } {
-			lappend status "PASS"
-		} else {
+	        if { $_sens < $SENS_MIN } {
+			lappend status "FAIL sens < $SENS_MIN"
+	        }else if { $_sens > $SENS_MAX } {
+			lappend status "FAIL sens > $SENS_MAX"
+	        }else{
 			lappend status "FAIL"
 		}
 	}
