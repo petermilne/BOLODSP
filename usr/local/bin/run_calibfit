@@ -42,6 +42,21 @@ rv() {
         $*
 }
 
+
+set_gains_reset_os_dacs() {
+
+	sites=$(set.site 0 distributor | awk '{print $2}' | grep -o '[1-6]')
+	for site in $sites; do
+		for channel in $(seq 1 8); do
+			set.site $site B8:GAIN:$channel 1V2
+		done
+	done
+
+	echo 1 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
+	echo 0 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
+}
+
+
 fit_cal_ch() {
         ch=$1
         nsam=$2
@@ -59,6 +74,8 @@ fit_cal_ch() {
         echo $ch $sens $tau >> /tmp/senslogs.txt
 }
 
+[ $BOLO_VERBOSE ] && echo "Setting GAINS and reset OSDACs before running."
+set_gains_reset_os_dacs
 
 [ $BOLO_VERBOSE ] && echo "calibration starts for channels \"$BOLO_ACTIVE_CHAN\""
 
