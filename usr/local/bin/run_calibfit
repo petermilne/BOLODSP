@@ -19,9 +19,13 @@ set.site 14 THEAT ${2:-1.0}
 set.site 14 TCOOL ${3:-1.0}
 set.site 14 VBIAS ${4:-1.0}
 LOAD_POWER_FILTERS=1
+BOLO_LOAD_OFFSETS=1
 EOF
 fi
 source /mnt/local/sysconfig/bolo.sh
+
+[ -z $BOLO_LOAD_OFFSETS ] && BOLO_LOAD_OFFSETS=1
+
 reset.dsp
 
 # For non-default calibfit operation eg
@@ -59,7 +63,7 @@ fit_cal_ch() {
 [ $BOLO_VERBOSE ] && echo "calibration starts for channels \"$BOLO_ACTIVE_CHAN\""
 
 
-for ch in $BOLO_ACTIVE_CHAN
+[ $BOLO_LOAD_OFFSETS -eq 1 ] && for ch in $BOLO_ACTIVE_CHAN
 do
          load_offset_channel.tcl $ch 0 0 1
 done
