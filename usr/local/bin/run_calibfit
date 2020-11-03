@@ -67,7 +67,8 @@ fit_cal_ch() {
         grep "=" /tmp/pgm_calibfit.txt | tr -d \  > /tmp/pgm_calibfit.sh
         source /tmp/pgm_calibfit.sh
 
-        rv load_offset_channel.tcl $ch $i0 $q0 $sens
+	[ $BOLO_LOAD_OFFSETS -eq 1 ] && \
+		rv load_offset_channel.tcl $ch $i0 $q0 $sens
 
         echo >>/tmp/calibfit.log calibration_data $ch $i0 $q0 $sens $tau
 
@@ -80,7 +81,8 @@ set_gains_reset_os_dacs
 [ $BOLO_VERBOSE ] && echo "calibration starts for channels \"$BOLO_ACTIVE_CHAN\""
 
 
-[ $BOLO_LOAD_OFFSETS -eq 1 ] && for ch in $BOLO_ACTIVE_CHAN
+[ $BOLO_LOAD_OFFSETS -eq 1 ] && \
+for ch in $BOLO_ACTIVE_CHAN
 do
          load_offset_channel.tcl $ch 0 0 1
 done
