@@ -62,7 +62,7 @@ fit_cal_ch() {
         nsam=$2
         [ $BOLO_VERBOSE ] && (echo;echo;echo "fit_cal_ch $ch")
 
-        /usr/local/bin/calibfit -n $nsam -c $ch $CALIBFITARGS 2>&1 >/tmp/pgm_calibfit.txt
+        /usr/local/bin/calibfit -n $nsam -c $ch $CALIBFITARGS >/tmp/pgm_calibfit.txt 2>&1
         [ $BOLO_VERBOSE ] && cat /tmp/pgm_calibfit.txt
         grep "=" /tmp/pgm_calibfit.txt | tr -d \  > /tmp/pgm_calibfit.sh
         source /tmp/pgm_calibfit.sh
@@ -98,12 +98,11 @@ post=$(($nsamples > 100000? $nsamples: 100000))
 # System must be set up for soft trigger for calibration
 orig_trg=$(get.site 1 trg | cut -d' ' -f1)
 set.site 1 trg=1,1,1
+orig_transient=$(set.site 0 transient)
 set.site 0 "transient POST=$post SOFT_TRIGGER=0; set_arm"
 wait_until_state 1
 
 bolo_calibration
-
-reset.dsp
 
 for ch in $BOLO_ACTIVE_CHAN
 do
@@ -131,24 +130,24 @@ then
 fi
 
 if [ $LOAD_POWER_FILTERS ]; then
-# Start running data through the filters so we can load multiple power filters
-streamtonowhered start
-until set.site 0 transient_state | grep -qe ^1
-do
-    sleep 0.1
-done
-soft_trigger
-for ch in $BOLO_ACTIVE_CHAN
-do
+    # Start running data through the filters so we can load multiple power filters
+    set.site 0 transient PRE=1000 SOFT_TRIGGER=1
+    set.site 0 set_arm
+    wait_until_state 2
+    for ch in $BOLO_ACTIVE_CHAN
+    do
         fil_args=$(awk '$1=='$ch' {print $2, $3}' /tmp/senslogs.txt)
         rv power_filter_design.tcl $ch $fil_args
         rv /usr/local/bin/wait_for_filters nospawn
-done
-streamtonowhered stop
+    done
+    set.site 0 set_abort
 fi
 
-# Restore previous triggering setup
-set.site 1 $orig_trg
+reset.dsp
+
+# Restore previous triggering and transient setup.
+set.site 1 "$orig_trg"
+set.site 0 transient "$orig_transient"
 
 rm /tmp/senslogs.txt
 
