@@ -3,14 +3,14 @@
 # Check if the filters are ready for another reload (as indicated by the
 # filter status register bits 0 and 4). If the filters aren't ready,
 # send some data through them until they are.
-# To get data through, use streamtonowhered. Note however that this
+# To get data through, use a transient capture with PRE>0. Note however that this
 # will overwrite any previous transient capture data, so ensure that
 # this data is safely stored elsewhere before runing this script
 #
-# For improved efficiency when loading multiple filters, start at stream to
-# nowhere before running this script, and then pass "nospawn" as the first
-# argument to the script. This will bypass spawning a new streamtonowhered
-# process
+# For improved efficiency when loading multiple filters, start a transient capture
+# with PRE>0 before running this script, and then pass "nospawn" as the first
+# argument to the script. This will bypass starting a new transient capture.
+# After the script returns, the transient capture can be aborted.
 
 wait_until_filter_ready () {
     filter_status=$(set.site 14 FILTER_STATUS)
@@ -20,14 +20,10 @@ wait_until_filter_ready () {
     then
         if [ "$1" != "nospawn" ]
         then
-            streamtonowhered start
-            # Wait until armed
-            # Can't use wait_until_state 1 here, because it's not a transient capture
-            until set.site 0 transient_state | grep -qe "^1"
-            do
-                sleep 0.1
-            done
-            soft_trigger
+            orig_transient=$(set.site 0 transient)
+            set.site 0 transient PRE=1000 SOFT_TRIGGER=1
+            set.site 0 set_arm
+            wait_until_state 2
         fi
         # Poll until the filters are ready
         while true
@@ -42,7 +38,11 @@ wait_until_filter_ready () {
                 sleep 0.5
             fi
         done
-        [ "$1" != "nospawn" ] && streamtonowhered stop
+        if [ "$1" != "nospawn" ]
+        then
+            set.site 0 set_abort
+            set.site 0 transient "$orig_transient"
+        fi
     fi
 }
 
