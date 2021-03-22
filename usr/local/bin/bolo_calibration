@@ -45,12 +45,7 @@ echo $osdac_reverse > /dev/dsp1/OSDAC_REG_DATA
 sleep $tcool
 # Wait until acquisition has finished, else VDC/current will be replaced
 # with power in the data stream when calibration is unset
-while true
-do
-    acquire_idle=$(set.site 0 transient_state | awk '{print $1}')
-    [ "$acquire_idle" -eq 0 ] && break
-    sleep 1
-done
+wait_until_state 0
 # Unset the calibration run setting. It'll be re-set to 1 the next time this
 # script runs
 echo 0 > /dev/dsp1/CALIBRATION
