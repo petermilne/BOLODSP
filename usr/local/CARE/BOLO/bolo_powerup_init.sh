@@ -28,6 +28,7 @@ echo "Setting gains to 1V25"
 # to control all BOLO sites in bolodsp.init
 sites=$(set.site 0 distributor | awk '{print $2}' | grep -o '[1-6]')
 for site in $sites; do
+    [ -z $BOLO_AO_SECOND_INIT ] && ao420_init $site
     for channel in $(seq 1 8); do
         set.site $site B8:GAIN:$channel 1V2  
     done
