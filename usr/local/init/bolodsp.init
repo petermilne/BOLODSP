@@ -115,6 +115,13 @@ cat - >/etc/inetd.bolo.conf <<EOF
 45072 stream tcp nowait root run_calibfit run_calibfit
 EOF
 
+(
+echo Defer bolo_powerup_init.sh until after ioc_ready
+/usr/local/bin/wait_ioc_ready
+/usr/local/CARE/BOLO/bolo_powerup_init.sh
+) &
+
+
 
 
 inetd /etc/inetd.bolo.conf
