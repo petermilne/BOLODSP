@@ -118,10 +118,8 @@ EOF
 mkdir -p /etc/epics.d
 cat - <<EOF >/etc/epics.d/bolo_powerup_init
 #!/bin/sh
-echo 
-/usr/bin/logger -t bolo_power_up_init 01
-/usr/local/CARE/BOLO/bolo_powerup_init.sh
-/usr/bin/logger -t bolo_power_up_init 99
+/usr/local/CARE/BOLO/bolo_powerup_init.sh 2>&1 | \
+	logger -t bolo_power_up_init
 EOF
 chmod a+rx /etc/epics.d/bolo_powerup_init
 
