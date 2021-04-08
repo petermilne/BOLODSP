@@ -22,9 +22,16 @@ LOAD_POWER_FILTERS=1
 BOLO_LOAD_OFFSETS=1
 EOF
 fi
-source /mnt/local/sysconfig/bolo.sh
+. /mnt/local/sysconfig/bolo.sh
 
-[ -z $BOLO_LOAD_OFFSETS ] && BOLO_LOAD_OFFSETS=1
+# Don't do anything if calibration is not enabled.
+if [ "$(get.site 14 CAL_EN)" -eq 0 ]; then
+    echo "CAL_EN=0: skipping calibration."
+    echo "END"
+    exit
+fi
+
+[ -z "$BOLO_LOAD_OFFSETS" ] && BOLO_LOAD_OFFSETS=1
 
 reset.dsp
 
@@ -34,12 +41,13 @@ reset.dsp
 # CALIBFIT_ARGS="-H 0.85"
 # Remove previous calibration results: we're only interested in the latest
 rm -f /tmp/calibfit.log
+rm -f /tmp/senslogs.txt
 
 [ "$CALIBFITARGS" != "" ] && echo "custom CALIBFITARGS $CALIBFITARGS"
 
 rv() {
-        [ $BOLO_VERBOSE ] && echo $*
-        $*
+        [ "$BOLO_VERBOSE" ] && echo "$@"
+        "$@"
 }
 
 
@@ -47,9 +55,7 @@ set_gains_reset_os_dacs() {
 
 	sites=$(set.site 0 distributor | awk '{print $2}' | grep -o '[1-6]')
 	for site in $sites; do
-		for channel in $(seq 1 8); do
-			set.site $site B8:GAIN:$channel 1V2
-		done
+            set.site "$site" B8:GAIN:[1-8] 1V2 > /dev/null
 	done
 
 	echo 1 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
@@ -65,7 +71,7 @@ fit_cal_ch() {
         /usr/local/bin/calibfit -n $nsam -c $ch $CALIBFITARGS >/tmp/pgm_calibfit.txt 2>&1
         [ $BOLO_VERBOSE ] && cat /tmp/pgm_calibfit.txt
         grep "=" /tmp/pgm_calibfit.txt | tr -d \  > /tmp/pgm_calibfit.sh
-        source /tmp/pgm_calibfit.sh
+        . /tmp/pgm_calibfit.sh
 
 	[ $BOLO_LOAD_OFFSETS -eq 1 ] && \
 		rv load_offset_channel.tcl $ch $i0 $q0 $sens
@@ -75,16 +81,16 @@ fit_cal_ch() {
         echo $ch $sens $tau >> /tmp/senslogs.txt
 }
 
-[ $BOLO_VERBOSE ] && echo "Setting GAINS and reset OSDACs before running."
+[ "$BOLO_VERBOSE" ] && echo "Setting GAINS and reset OSDACs before running."
 set_gains_reset_os_dacs
 
-[ $BOLO_VERBOSE ] && echo "calibration starts for channels \"$BOLO_ACTIVE_CHAN\""
+[ "$BOLO_VERBOSE" ] && echo "calibration starts for channels \"$BOLO_ACTIVE_CHAN\""
 
 
 [ $BOLO_LOAD_OFFSETS -eq 1 ] && \
 for ch in $BOLO_ACTIVE_CHAN
 do
-         load_offset_channel.tcl $ch 0 0 1
+         load_offset_channel.tcl "$ch" 0 0 1
 done
 
 reset.dsp
@@ -92,8 +98,8 @@ reset.dsp
 tcool=$(set.site 14 TCOOL)
 theat=$(set.site 14 THEAT)
 twait=$(set.site 14 TWAIT)
-nsamples=$(expect -c "puts [expr { int(($tcool + $theat + $twait) * 1e4) }]")
-post=$(($nsamples > 100000? $nsamples: 100000))
+nsamples=$(awk "BEGIN { print int(($twait + $theat + $tcool) * 1e4) }")
+post="$((nsamples > 100000 ? nsamples : 100000))"
 
 # System must be set up for soft trigger for calibration
 orig_trg=$(get.site 1 trg | cut -d' ' -f1)
@@ -110,7 +116,7 @@ do
 done
 
 # Copy calib data so it doesn't get overwritten
-if [ $COPY_CALIB_DATA ]
+if [ "$COPY_CALIB_DATA" ]
 then
     mkdir -p /tmp/calib_data
     for ch in $BOLO_ACTIVE_CHAN
@@ -124,22 +130,21 @@ then
         do
             # 0-Pad to 2 digits
             pad=$(printf "%02d" $chan)
-            cp /dev/acq400/data/${site}/${pad} /tmp/calib_data/${site}/${pad}
+            cp "/dev/acq400/data/${site}/${pad}" "/tmp/calib_data/${site}/${pad}"
         done
     done
 fi
 
-if [ $LOAD_POWER_FILTERS ]; then
+if [ "$LOAD_POWER_FILTERS" ]; then
     # Start running data through the filters so we can load multiple power filters
     set.site 0 transient PRE=1000 SOFT_TRIGGER=1
     set.site 0 set_arm
     wait_until_state 2
-    for ch in $BOLO_ACTIVE_CHAN
+    while read -r ch sens tau
     do
-        fil_args=$(awk '$1=='$ch' {print $2, $3}' /tmp/senslogs.txt)
-        rv power_filter_design.tcl $ch $fil_args
-        rv /usr/local/bin/wait_for_filters nospawn
-    done
+        rv power_filter_design.tcl "$ch" "$sens" "$tau"
+        rv wait_for_filters nospawn
+    done < /tmp/senslogs.txt
     set.site 0 set_abort
 fi
 
@@ -148,8 +153,6 @@ reset.dsp
 # Restore previous triggering and transient setup.
 set.site 1 "$orig_trg"
 set.site 0 transient "$orig_transient"
-
-rm /tmp/senslogs.txt
 
 /usr/local/bin/web_diagnostics_cal
 /usr/local/bin/web_diagnostics_ram
