@@ -21,14 +21,12 @@ fi
 monitor_once() {        
 	[ $ADDED_WEB -eq 0 ] && add_web
 	export ROW_LIMIT=0
-    source /mnt/local/sysconfig/bolo.sh
-    export SENS_MIN=${SENS_MIN:-1}
-    export SENS_MAX=${SENS_MAX:-15}
-	/usr/local/bin/web_cal_data.tcl |  fs2xml -o /dev/shm/$XMLNAME.xml -k ''        
+        source /mnt/local/sysconfig/bolo.sh
+        export SENS_MIN=${SENS_MIN:-1}
+        export SENS_MAX=${SENS_MAX:-15}
+	/usr/local/bin/web_cal_data.py |  fs2xml -o /dev/shm/$XMLNAME.xml -k ''        
 }
 
 if [ "$(basename $0)" = "web_diagnostics_cal" ]; then
   monitor_once
 fi
-
-

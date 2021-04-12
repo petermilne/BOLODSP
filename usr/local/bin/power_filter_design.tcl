@@ -91,12 +91,18 @@ proc output_coef_data {filt channel binary_point} {
 }
 
 proc produce_filter_data {NTAPS FC FS ATTEN BINARY_POINT sens tau channel} {
-    # Produce a windowed-sinc low pass filter
-    set taps_norm [ windowed_sinc $NTAPS $FC $FS $ATTEN]
-    # Differentiate the filter
-    set dfdt [ differentiate_filter $taps_norm $FS ]
-    # Now create the deconvolution filter
-    set filt [ create_deconvolution_filter $taps_norm $dfdt $sens $tau ]
+    if { $sens == 0 } {
+        # A failed calibration precludes designing a useful filter.
+        # Explicitly zero the output to make clear it shouldn't be used.
+        set filt [ lrepeat $NTAPS 0 ]
+    } else {
+        # Produce a windowed-sinc low pass filter
+        set taps_norm [ windowed_sinc $NTAPS $FC $FS $ATTEN]
+        # Differentiate the filter
+        set dfdt [ differentiate_filter $taps_norm $FS ]
+        # Now create the deconvolution filter
+        set filt [ create_deconvolution_filter $taps_norm $dfdt $sens $tau ]
+    }
     # Finally, output the data
     output_coef_data $filt $channel $BINARY_POINT
 }

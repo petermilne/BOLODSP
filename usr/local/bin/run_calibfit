@@ -41,7 +41,6 @@ reset.dsp
 # CALIBFIT_ARGS="-H 0.85"
 # Remove previous calibration results: we're only interested in the latest
 rm -f /tmp/calibfit.log
-rm -f /tmp/senslogs.txt
 
 [ "$CALIBFITARGS" != "" ] && echo "custom CALIBFITARGS $CALIBFITARGS"
 
@@ -62,24 +61,6 @@ set_gains_reset_os_dacs() {
 	echo 0 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
 }
 
-
-fit_cal_ch() {
-        ch=$1
-        nsam=$2
-        [ $BOLO_VERBOSE ] && (echo;echo;echo "fit_cal_ch $ch")
-
-        /usr/local/bin/calibfit -n $nsam -c $ch $CALIBFITARGS >/tmp/pgm_calibfit.txt 2>&1
-        [ $BOLO_VERBOSE ] && cat /tmp/pgm_calibfit.txt
-        grep "=" /tmp/pgm_calibfit.txt | tr -d \  > /tmp/pgm_calibfit.sh
-        . /tmp/pgm_calibfit.sh
-
-	[ $BOLO_LOAD_OFFSETS -eq 1 ] && \
-		rv load_offset_channel.tcl $ch $i0 $q0 $sens
-
-        echo >>/tmp/calibfit.log calibration_data $ch $i0 $q0 $sens $tau
-
-        echo $ch $sens $tau >> /tmp/senslogs.txt
-}
 
 [ "$BOLO_VERBOSE" ] && echo "Setting GAINS and reset OSDACs before running."
 set_gains_reset_os_dacs
@@ -110,10 +91,9 @@ wait_until_state 1
 
 bolo_calibration
 
-for ch in $BOLO_ACTIVE_CHAN
-do
-        fit_cal_ch $ch $nsamples
-done
+[ "$BOLO_VERBOSE" ] && echo "Fitting data"
+/usr/local/bin/calibfit.py -t -n "$nsamples" $CALIBFITARGS $BOLO_ACTIVE_CHAN > /tmp/calibfit.log
+[ "$BOLO_VERBOSE" ] && cat /tmp/calibfit.log
 
 # Copy calib data so it doesn't get overwritten
 if [ "$COPY_CALIB_DATA" ]
@@ -140,12 +120,19 @@ if [ "$LOAD_POWER_FILTERS" ]; then
     set.site 0 transient PRE=1000 SOFT_TRIGGER=1
     set.site 0 set_arm
     wait_until_state 2
-    while read -r ch sens tau
+    while read -r ch sens tau ioff qoff
     do
         rv power_filter_design.tcl "$ch" "$sens" "$tau"
         rv wait_for_filters nospawn
-    done < /tmp/senslogs.txt
+    done < /tmp/calibfit.log
     set.site 0 set_abort
+fi
+
+if [ "$BOLO_LOAD_OFFSETS" ]; then
+    while read -r ch sens tau ioff qoff
+    do
+        rv load_offset_channel.tcl "$ch" "$ioff" "$qoff" "$sens"
+    done < /tmp/calibfit.log
 fi
 
 reset.dsp
