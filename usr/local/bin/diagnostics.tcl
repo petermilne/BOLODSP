@@ -1,7 +1,9 @@
 #!/usr/local/bin/expect
 
-# Number of channels the BOLODSP FPGA module was built for
+# Number of channels the BOLODSP FPGA module was built for.
+set NCHANBUILD 48
 
+# Number of channels currently active.
 proc get_nchan {} {
 	set fp [open /etc/acq400/0/aggregator r]
 	set aggstr [gets $fp]
@@ -14,7 +16,7 @@ proc get_nchan {} {
 set nchan [get_nchan]
 
 # Each channel has I, Q, PI, PQ offsets
-set nvals [ expr { $nchan * 4 } ]
+set nvals [ expr { $NCHANBUILD * 4 } ]
 # Each offset is 4 bytes
 set nbytes [ expr { $nvals * 4 } ]
 set fd [ open /dev/dsp1.3 r ]
@@ -35,8 +37,8 @@ for {set i 0} {$i < $nchan} {incr i} {
     lappend channels [expr $i + 1]
     lappend offsets1 [ lindex $offlist [ expr {2 * $i} ] ]
     lappend offsets2 [ lindex $offlist [ expr {2 * $i + 1} ] ]
-    lappend offsets3 [ lindex $offlist [ expr {2 * ($i + $nchan)} ] ]
-    lappend offsets4 [ lindex $offlist [ expr {2 * ($i + $nchan) + 1} ] ]
+    lappend offsets3 [ lindex $offlist [ expr {2 * ($i + $NCHANBUILD)} ] ]
+    lappend offsets4 [ lindex $offlist [ expr {2 * ($i + $NCHANBUILD) + 1} ] ]
 }
 
 set formatStr {%15s%20s%20s%17s%17s}

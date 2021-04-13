@@ -23,8 +23,8 @@ set scale [ expr { 1.25/2**25*20/18 } ]
 set i0_int [ expr { int($i0/$scale) } ]
 set q0_int [ expr { int($q0/$scale) } ]
 set pscale [ expr { 1.25/2**19*20/18 } ]
-set pi0_int [ expr { int(($i0/$sens)/$pscale) } ]
-set pq0_int [ expr { int(($q0/$sens)/$pscale) } ]
+set pi0_int [ expr { $sens == 0 ? 0 : int(($i0/$sens)/$pscale) } ]
+set pq0_int [ expr { $sens == 0 ? 0 : int(($q0/$sens)/$pscale) } ]
 # Replace the I0, Q0, PI0 and PQ0 elements of the offsets
 # list with updated values
 set i0_index [ expr { $channel*2 } ]

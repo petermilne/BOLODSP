@@ -10,22 +10,7 @@ mkdir -p opkg release
 
 cp -a usr opkg
 
-# Make sure arm-xilinx-linux-gnueabi-gcc (and -g++) are in PATH, possibly
-# by sourcing the Vivado settings script. Or specify the cross compiler
-# to use (e.g. CROSS_COMPILE=arm-linux-gnueabi- ./make.package). In this case,
-# ensure ${CROSS_COMPILE}{gcc,g++} are in PATH
-if [ -z ${CROSS_COMPILE+word} ]
-then
-    make -C calibfit
-else
-    make CROSS_COMPILE=${CROSS_COMPILE} -C calibfit
-fi
-cp calibfit/calibfit opkg/usr/local/bin/
-
-
-
 tar cvzf release/${SEQ}-${PKG}-${DC}.tgz -C opkg .
 ls -l release/${SEQ}-${PKG}-${DC}.tgz
 rm -f ${PACKAGES}/${SEQ}-${PKG}*
 cp release/${SEQ}-${PKG}-${DC}.tgz ${PACKAGES}
-
