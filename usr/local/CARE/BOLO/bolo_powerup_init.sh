@@ -37,7 +37,12 @@ done
 # Set internal rising edge trigger
 set.site 1 trg=1,1,1
 # 1MHz sample clock set with role - ROLE=fpmaster for front panel clk
-set.site 0 sync_role ${ROLE:-master} 1M ${FIN:-} TRG:DX=d1 CLKDIV=1
+if [ "x$CUSTOM_SYNC_ROLE" != "x" ]; then
+	$CUSTOM_SYNC_ROLE
+else
+	set.site 0 sync_role ${ROLE:-master} 1M ${FIN:-} TRG:DX=d1 CLKDIV=1
+fi
+
 
 
 # Reset offset DACs. They seem to be confused by the switch to sideport control,
