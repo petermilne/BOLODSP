@@ -52,12 +52,10 @@ echo 0 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
 
 set.sys /sys/module/acq420fmc/parameters/FIFERR 0
 
-# Start a stream to set the DAC output going, to Ohmically heat the sensor.
-# It will continue even after the stream is stopped
-/usr/local/bin/streamtonowhered start
-sleep 1
-soft_trigger
-sleep 1
-/usr/local/bin/streamtonowhered stop
-#/usr/local/bin/web_diagnostics_ram
-
+# Start a capture to set the DAC output going, to Ohmically heat the sensor.
+# DAC output will continue even after the capture has finished.
+set.site 0 transient PRE=0 POST=1000 SOFT_TRIGGER=1
+set.site 0 set_arm
+wait_until_state 5  # Data collection finished.
+# Reset DSP to ensure channel ordering is correct for first acquisition.
+reset.dsp
