@@ -9,9 +9,9 @@ if [ -e $CUSTOM ]; then
 	18.0)
 		DAC_EXCITE_AMP=3;;
 	15.0)
-		DAC_EXITE_AMP=2;;
+		DAC_EXCITE_AMP=2;;
 	12.0)
-		DAC_EXITE_AMP=1;;
+		DAC_EXCITE_AMP=1;;
 	9.0)
 		DAC_EXCITE_AMP=0;;
 	*)
