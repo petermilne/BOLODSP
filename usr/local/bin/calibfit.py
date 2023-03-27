@@ -29,9 +29,10 @@ include_traceback = (logger.level == logging.DEBUG)
 # n is nbits - 2 according to Xilinx, so we need Z_30.
 Z_30 = reduce(mul, (math.sqrt(1 + 2**(-2 * i)) for i in range(1, 31)))
 EXCITEV = float(os.getenv("CALIBFIT_EXCITEV", "18"))
-AMP_SCALE = 1.25 / 2**24 * 20 / EXCITEV / Z_30
+GAIN_PV = {"1V2": 1.25, "2V5": 2.5, "5V0": 5.0, "10V": 10.0}
+AMP_SCALE = 1 / 2**24 * 20 / EXCITEV / Z_30  # Multiplied by vgain
 PHASE_SCALE = 2**-29
-VDC_SCALE = 1.25 / 2**15
+VDC_SCALE = 1 / 2**15  # Multiplied by vgain
 IDC_SCALE = 128 / 100 / 2**12 * 25 / 3 / 1000
 SAMPLE_RATE = 1e4
 
@@ -46,12 +47,13 @@ LinearFit = namedtuple("LinearFit", ["c0", "tau"])
 FitParams = namedtuple("FitParams", ["sens", "tau", "Ioff", "Qoff"])
 
 
-def read_channel(channel: int, nsamples: int, fileroot: Path) -> ChannelData:
+def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> ChannelData:
     """
     Read the amplitude, phase and DC bias data for a given channel.
 
     :param channel: the channel number, from 1 to NCHAN
     :param nsamples: the number of samples to read
+    :param gainpv: the B8:GAIN PV setting for the channel to be read
     :param fileroot: the root directory where the data is stored
     :return: a tuple (amplitude, phase, vdc, idc, time) of arrays
     """
@@ -78,9 +80,10 @@ def read_channel(channel: int, nsamples: int, fileroot: Path) -> ChannelData:
     idc = idc[SKIP:]
     time = time[SKIP:]
     # Convert to physical units. Use float32 to save memory and speed up arithmetic.
-    amplitude = (amplitude * AMP_SCALE).astype(np.float32)
+    vgain = GAIN_PV[gainpv]
+    amplitude = (amplitude * vgain * AMP_SCALE).astype(np.float32)
     phase = (phase * PHASE_SCALE).astype(np.float32)
-    vdc = (vdc * VDC_SCALE).astype(np.float32)
+    vdc = (vdc * vgain * VDC_SCALE).astype(np.float32)
     idc = (idc * IDC_SCALE) .astype(np.float32)
     time = (time / SAMPLE_RATE).astype(np.float32)
     return ChannelData(amplitude, phase, vdc, idc, time)
@@ -234,7 +237,7 @@ def calibrate_single_channel(channel: int,
     """
     try:
         amp, phase, vdc, idc, time = read_channel(channel, options.nsamples,
-                                                  options.root_dir)
+                                                  options.gainpv, options.root_dir)
         preheating_indices = get_preheating_indices(vdc, options.heating_threshold,
                                                     options.cooling_threshold)
         heating_indices = get_heating_indices(vdc, options.heating_threshold)
@@ -287,6 +290,8 @@ def main():
                         help="Root directory where the data is stored")
     parser.add_argument("-t", "--terse", action="store_true",
                         help="Omit headers from output")
+    parser.add_argument("-g", "--gainpv", choices=list(GAIN_PV),
+                        help="B8:GAIN value used for all channels to calibrate.")
     parser.add_argument("channels", type=int, nargs="+",
                         help="Channels to calibrate")
     options = parser.parse_args()

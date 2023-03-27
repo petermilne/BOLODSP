@@ -19,10 +19,24 @@ set channel [ expr { [ lindex $argv 0 ] - 1 } ]
 set i0 [ lindex $argv 1 ]
 set q0 [ lindex $argv 2 ]
 set sens [ lindex $argv 3 ]
-set scale [ expr { 1.25/2**25*20/18 } ]
+# Calculate the volts-to-counts scaling, depends on the gain
+set site [ expr {int($channel / 8) + 1} ]
+set physchan [ expr {int($channel % 8) + 1} ]
+# Calculate the maximum voltage by reading ADC gain registers.
+# This is significantly faster than using EPICS PV access, which is
+# necessary if this script is to run for 48 channels in a reasonable
+# amount of time.
+set fd0 [ open /dev/bolo8/${site}/ADC_${physchan}_A0 r ]
+set a0 [ read $fd0 ]
+close $fd0
+set fd1 [ open /dev/bolo8/${site}/ADC_${physchan}_A1 r ]
+set a1 [ read $fd1 ]
+close $fd1
+set vgain [ expr { 10.0 / (1 << (2 * $a1 + $a0)) } ]
+set scale [ expr { $vgain/2**25*20/18 } ]
 set i0_int [ expr { int($i0/$scale) } ]
 set q0_int [ expr { int($q0/$scale) } ]
-set pscale [ expr { 1.25/2**19*20/18 } ]
+set pscale [ expr { $vgain/2**19*20/18 } ]
 set pi0_int [ expr { $sens == 0 ? 0 : int(($i0/$sens)/$pscale) } ]
 set pq0_int [ expr { $sens == 0 ? 0 : int(($q0/$sens)/$pscale) } ]
 # Replace the I0, Q0, PI0 and PQ0 elements of the offsets

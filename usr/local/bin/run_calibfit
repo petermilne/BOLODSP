@@ -20,6 +20,7 @@ set.site 14 TCOOL ${3:-1.0}
 set.site 14 VBIAS ${4:-1.0}
 LOAD_POWER_FILTERS=1
 BOLO_LOAD_OFFSETS=1
+BOLO_GAIN=1V2
 EOF
 fi
 . /mnt/local/sysconfig/bolo.sh
@@ -37,6 +38,17 @@ LOAD_POWER_FILTERS=${LOAD_POWER_FILTERS:-1}
 BOLO_LOAD_OFFSETS=${BOLO_LOAD_OFFSETS:-1}
 COPY_CALIB_DATA=${COPY_CALIB_DATA:-1}
 CALIBFIT_EXCITEV=${CALIBFIT_EXCITEV:-18.0}
+
+BOLO_GAIN=${BOLO_GAIN:-1V2}
+case "$BOLO_GAIN" in
+    1V2|2V5|5V0|10V)
+        :
+        ;;
+    *)
+        echo "Invalid BOLO_GAIN value: should be 1V2, 2V5, 5V0 or 10V"
+        exit 1
+        ;;
+esac
 
 reset.dsp
 
@@ -59,7 +71,7 @@ set_gains_reset_os_dacs() {
 
 	sites=$(set.site 0 distributor | awk '{print $2}' | grep -o '[1-6]')
 	for site in $sites; do
-            set.site "$site" B8:GAIN:[1-8] 1V2 > /dev/null
+            set.site "$site" B8:GAIN:[1-8] "$BOLO_GAIN" > /dev/null
 	done
 
 	echo 1 | tee /dev/bolo8/*/OS_DAC_RESETn > /dev/null
@@ -67,7 +79,7 @@ set_gains_reset_os_dacs() {
 }
 
 
-[ "$BOLO_VERBOSE" -eq 1 ] && echo "Setting GAINS and reset OSDACs before running."
+[ "$BOLO_VERBOSE" -eq 1 ] && echo "Setting GAINS to $BOLO_GAIN and reset OSDACs before running."
 set_gains_reset_os_dacs
 
 [ "$BOLO_VERBOSE" -eq 1 ] && echo "calibration starts for channels \"$BOLO_ACTIVE_CHAN\""
@@ -99,7 +111,7 @@ bolo_calibration
 
 [ "$BOLO_VERBOSE" -eq 1 ] && echo "Fitting data"
 export CALIBFIT_EXCITEV
-/usr/local/bin/calibfit.py -t -n "$nsamples" $CALIBFITARGS $BOLO_ACTIVE_CHAN > /tmp/calibfit.log
+/usr/local/bin/calibfit.py -t -n "$nsamples" -g "$BOLO_GAIN" $CALIBFITARGS $BOLO_ACTIVE_CHAN > /tmp/calibfit.log
 [ "$BOLO_VERBOSE" -eq 1 ] && cat /tmp/calibfit.log
 
 # Copy calib data so it doesn't get overwritten
