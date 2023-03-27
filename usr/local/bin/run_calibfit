@@ -31,7 +31,12 @@ if [ "$(get.site 14 CAL_EN)" -eq 0 ]; then
     exit
 fi
 
-[ -z "$BOLO_LOAD_OFFSETS" ] && BOLO_LOAD_OFFSETS=1
+# Provide default values where necessary.
+BOLO_VERBOSE=${BOLO_VERBOSE:-1}
+LOAD_POWER_FILTERS=${LOAD_POWER_FILTERS:-1}
+BOLO_LOAD_OFFSETS=${BOLO_LOAD_OFFSETS:-1}
+COPY_CALIB_DATA=${COPY_CALIB_DATA:-1}
+CALIBFIT_EXCITEV=${CALIBFIT_EXCITEV:-18.0}
 
 reset.dsp
 
@@ -42,10 +47,10 @@ reset.dsp
 # Remove previous calibration results: we're only interested in the latest
 rm -f /tmp/calibfit.log
 
-[ "$CALIBFITARGS" != "" ] && echo "custom CALIBFITARGS $CALIBFITARGS"
+[ -n "$CALIBFITARGS" ] && echo "custom CALIBFITARGS $CALIBFITARGS"
 
 rv() {
-        [ "$BOLO_VERBOSE" ] && echo "$@"
+        [ "$BOLO_VERBOSE" -eq 1 ] && echo "$@"
         "$@"
 }
 
@@ -62,17 +67,18 @@ set_gains_reset_os_dacs() {
 }
 
 
-[ "$BOLO_VERBOSE" ] && echo "Setting GAINS and reset OSDACs before running."
+[ "$BOLO_VERBOSE" -eq 1 ] && echo "Setting GAINS and reset OSDACs before running."
 set_gains_reset_os_dacs
 
-[ "$BOLO_VERBOSE" ] && echo "calibration starts for channels \"$BOLO_ACTIVE_CHAN\""
+[ "$BOLO_VERBOSE" -eq 1 ] && echo "calibration starts for channels \"$BOLO_ACTIVE_CHAN\""
 
 
-[ $BOLO_LOAD_OFFSETS -eq 1 ] && \
+if [ "$BOLO_LOAD_OFFSETS" -eq 1 ]; then
 for ch in $BOLO_ACTIVE_CHAN
 do
          load_offset_channel.tcl "$ch" 0 0 1
 done
+fi
 
 reset.dsp
 
@@ -91,12 +97,13 @@ wait_until_state 1
 
 bolo_calibration
 
-[ "$BOLO_VERBOSE" ] && echo "Fitting data"
+[ "$BOLO_VERBOSE" -eq 1 ] && echo "Fitting data"
+export CALIBFIT_EXCITEV
 /usr/local/bin/calibfit.py -t -n "$nsamples" $CALIBFITARGS $BOLO_ACTIVE_CHAN > /tmp/calibfit.log
-[ "$BOLO_VERBOSE" ] && cat /tmp/calibfit.log
+[ "$BOLO_VERBOSE" -eq 1 ] && cat /tmp/calibfit.log
 
 # Copy calib data so it doesn't get overwritten
-if [ "$COPY_CALIB_DATA" ]
+if [ "$COPY_CALIB_DATA" -eq 1 ]
 then
     mkdir -p /tmp/calib_data
     for ch in $BOLO_ACTIVE_CHAN
@@ -115,7 +122,7 @@ then
     done
 fi
 
-if [ "$LOAD_POWER_FILTERS" ]; then
+if [ "$LOAD_POWER_FILTERS" -eq 1 ]; then
     # Start running data through the filters so we can load multiple power filters
     set.site 0 transient PRE=1000 SOFT_TRIGGER=1
     set.site 0 set_arm
@@ -128,7 +135,7 @@ if [ "$LOAD_POWER_FILTERS" ]; then
     set.site 0 set_abort
 fi
 
-if [ "$BOLO_LOAD_OFFSETS" ]; then
+if [ "$BOLO_LOAD_OFFSETS" -eq 1 ]; then
     while read -r ch sens tau ioff qoff
     do
         rv load_offset_channel.tcl "$ch" "$ioff" "$qoff" "$sens"
