@@ -21,17 +21,16 @@ if [ -e $CUSTOM ]; then
 
 	set.site 14 DAC_EXCITE_AMP=$DAC_EXCITE_AMP
 fi
-# Turn all the gains up to 1V25, since bolometer signals are always small
-hostname=$(hostname)
-echo "Setting gains to 1V25"
+
+# Set the gains. Normally 1V2 is fine, since the bolometer signals are small.
+BOLO_GAIN=${BOLO_GAIN:-1V2}
+echo "Setting gains to $BOLO_GAIN"
 # Read which sites are active from the distributor - we set the distributor
 # to control all BOLO sites in bolodsp.init
 sites=$(set.site 0 distributor | awk '{print $2}' | grep -o '[1-6]')
 for site in $sites; do
     ao420_init $site
-    for channel in $(seq 1 8); do
-        set.site $site B8:GAIN:$channel 1V2  
-    done
+    set.site "$site" B8:GAIN:[1-8] "$BOLO_GAIN"
 done
 
 # Set internal rising edge trigger
