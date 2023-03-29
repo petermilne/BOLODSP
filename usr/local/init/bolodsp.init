@@ -20,6 +20,9 @@ do
 	fi
 done
 mkdir /etc/acq400/14/
+ln -s /usr/local/bin/reset.dsp  /etc/acq400/14/PULSE_DSP_RESET
+ln -s /usr/local/bin/set.fdrive /etc/acq400/14/SET_FDRIVE
+
 /usr/local/CARE/acq400_dspfs.init
 cat /usr/local/CARE/BOLO/bolo8dsp-regdef >/dev/dsp1/.create
 ln -s /dev/dsp1/* /etc/acq400/14/
@@ -102,8 +105,6 @@ echo 1 | tee /dev/bolo8/*/DAC_RANGE > /dev/null # 40Vpp output
 # equilibrium. The frequency can be changed later (including in rc.user)
 # if desired
 set.fdrive 20000
-
-set.sys /sys/module/acq420fmc/parameters/FIFERR 0
 
 /usr/local/init/acq400_knobs.init start
 
