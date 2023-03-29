@@ -28,5 +28,5 @@ For explanation of BOLO8, see
 https://github.com/jacklovell/bolodsp-doc/releases
 
 calibfit math routine:
-make as non privileged user see calibfit/README
+now completely replaced by calibfit.py
 
