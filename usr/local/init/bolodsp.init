@@ -125,8 +125,8 @@ EOF
 chmod a+rx /etc/epics.d/bolo_powerup_init
 
 
-
-
+# enable port 4210 continuous streaming .. BOLODSP output is decimated
+echo STREAM_OPTS=--fill-scale >> /etc/sysconfig/acq400_streamd.conf
 
 inetd /etc/inetd.bolo.conf
 
