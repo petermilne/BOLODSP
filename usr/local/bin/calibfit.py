@@ -54,7 +54,7 @@ I(mA) = V(counts) * (1/0.12) / 2^16 * 10 * 32/20 =
 Then the current is averaged further by the DSP module, where the 100/128 scaling gets applied and needs to be undone.
 """
 def get_idc_scale(sn):
-    maxadc= 2**16 if sn < IADC12_SN1 else 2**12
+    maxadc = 2**16 if sn < IADC12_SN1 else 2**12
     return 128 / 100 * 16 / maxadc * 25 / 3 / 1000
 
 
