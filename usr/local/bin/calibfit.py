@@ -33,8 +33,47 @@ GAIN_PV = {"1V2": 1.25, "2V5": 2.5, "5V0": 5.0, "10V": 10.0}
 AMP_SCALE = 1 / 2**24 * 20 / EXCITEV / Z_30  # Multiplied by vgain
 PHASE_SCALE = 2**-29
 VDC_SCALE = 1 / 2**15  # Multiplied by vgain
-IDC_SCALE = 128 / 100 / 2**12 * 25 / 3 / 1000
+# from sn 60+, IADC becomes 12 bit .. so we need a dynamic scale by channel
+#IDC_SCALE = 128 / 100 / 2**12 * 25 / 3 / 1000
+IADC16_MAGIC = 2**12
+IADC12_MAGIC = 2**8
+IADC12_SN1 = 60
+
+
 SAMPLE_RATE = 1e4
+
+DEBUG=int(os.getenv("DEBUG", 0))
+def dprint(stuff):
+    if DEBUG > 0:
+        print(stuff)
+
+def get_current_scale():
+# cat /etc/acq400/0/aggregator
+#reg=0x000c8009 sites=1,2 threshold=16384 DATA_MOVER_EN=on spad=0,0,0
+    with open('/etc/acq400/0/aggregator') as fp:
+        agg = fp.readlines()[0]
+        dprint(agg)
+        sites = agg.split()[1].split('=')[1].split(',')
+
+    cscale = [ 0 ]   # index from 1
+
+# cat /etc/acq400/1/SERIAL
+# BE4010063
+# 0123456789
+
+    for s in sites:
+        with open(f'/etc/acq400/{s}/SERIAL') as fp:
+            sn = int(fp.readlines()[0][5:9])
+            dprint(f'site {s} sn {sn}')
+            magic  = IADC16_MAGIC if sn < IADC12_SN1 else IADC12_MAGIC
+            idc_scale = 128 / 100 / magic * 25 / 3 / 1000
+            for ch in range (0,8):
+                cscale.append(idc_scale)
+    return cscale
+
+IDC_SCALE=get_current_scale()
+dprint(IDC_SCALE)
+dprint('')
 
 
 # Number of samples to skip due to FPGA filter warmup.
@@ -57,6 +96,8 @@ def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> Ch
     :param fileroot: the root directory where the data is stored
     :return: a tuple (amplitude, phase, vdc, idc, time) of arrays
     """
+    dprint(f'idc ch:{channel} scale:{IDC_SCALE[channel]}')
+
     site = (channel - 1) // 8 + 1
     sitechannel = (channel - 1) % 8 + 1
     ampchannel = (sitechannel - 1) * 3 + 1
@@ -84,7 +125,7 @@ def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> Ch
     amplitude = (amplitude * vgain * AMP_SCALE).astype(np.float32)
     phase = (phase * PHASE_SCALE).astype(np.float32)
     vdc = (vdc * vgain * VDC_SCALE).astype(np.float32)
-    idc = (idc * IDC_SCALE) .astype(np.float32)
+    idc = (idc * IDC_SCALE[channel]) .astype(np.float32)
     time = (time / SAMPLE_RATE).astype(np.float32)
     return ChannelData(amplitude, phase, vdc, idc, time)
 
