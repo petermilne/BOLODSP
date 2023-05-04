@@ -33,26 +33,39 @@ GAIN_PV = {"1V2": 1.25, "2V5": 2.5, "5V0": 5.0, "10V": 10.0}
 AMP_SCALE = 1 / 2**24 * 20 / EXCITEV / Z_30  # Multiplied by vgain
 PHASE_SCALE = 2**-29
 VDC_SCALE = 1 / 2**15  # Multiplied by vgain
+
+
 # from sn 60+, IADC becomes 12 bit .. so we need a dynamic scale by channel
-#IDC_SCALE = 128 / 100 / 2**12 * 25 / 3 / 1000
-IADC16_MAGIC = 2**12
-IADC12_MAGIC = 2**8
 IADC12_SN1 = 60
+
+"""
+IDC_SCALE CALC:
+25/3 = 1/0.12 (the current sense resistor is 0R12). ADC measures volts, we need to scale by this value to get the amps.
+
+In BOLO8_CURR_ADC_SPI.vhd there is a 20/32 scale applied for data sent over the sideport to the DSP module
+(same principle as in BOLODSP, due to averaging), which needs to be undone.
+Full scale of the current ADC is +/-10 mA according to the data sheet.
+Assuming a 16 bit ADC with 2^16 codes:
+
+I(mA) = V(counts) * (1/0.12) / 2^16 * 10 * 32/20 = 
+        V(counts) * 25/3 / 2^16 * 16 = 
+        V(counts) * 25/3 * 16 / 2^16
+        
+Then the current is averaged further by the DSP module, where the 100/128 scaling gets applied and needs to be undone.
+"""
+def get_idc_scale(sn):
+    maxadc= 2**16 if sn < IADC12_SN1 else 2**12
+    return 128 / 100 * 16 / maxadc * 25 / 3 / 1000
 
 
 SAMPLE_RATE = 1e4
-
-DEBUG=int(os.getenv("DEBUG", 0))
-def dprint(stuff):
-    if DEBUG > 0:
-        print(stuff)
 
 def get_current_scale():
 # cat /etc/acq400/0/aggregator
 #reg=0x000c8009 sites=1,2 threshold=16384 DATA_MOVER_EN=on spad=0,0,0
     with open('/etc/acq400/0/aggregator') as fp:
         agg = fp.readlines()[0]
-        dprint(agg)
+        logger.debug(agg)
         sites = agg.split()[1].split('=')[1].split(',')
 
     cscale = [ 0 ]   # index from 1
@@ -61,19 +74,19 @@ def get_current_scale():
 # BE4010063
 # 0123456789
 
+
     for s in sites:
         with open(f'/etc/acq400/{s}/SERIAL') as fp:
             sn = int(fp.readlines()[0][5:9])
-            dprint(f'site {s} sn {sn}')
-            magic  = IADC16_MAGIC if sn < IADC12_SN1 else IADC12_MAGIC
-            idc_scale = 128 / 100 / magic * 25 / 3 / 1000
+            logger.debug(f'site {s} sn {sn}')
+            idc_scale = get_idc_scale(sn)
             for ch in range (0,8):
                 cscale.append(idc_scale)
     return cscale
 
 IDC_SCALE=get_current_scale()
-dprint(IDC_SCALE)
-dprint('')
+logger.debug(IDC_SCALE)
+logger.debug('')
 
 
 # Number of samples to skip due to FPGA filter warmup.
@@ -96,7 +109,7 @@ def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> Ch
     :param fileroot: the root directory where the data is stored
     :return: a tuple (amplitude, phase, vdc, idc, time) of arrays
     """
-    dprint(f'idc ch:{channel} scale:{IDC_SCALE[channel]}')
+    logger.debug(f'idc ch:{channel} scale:{IDC_SCALE[channel]}')
 
     site = (channel - 1) // 8 + 1
     sitechannel = (channel - 1) % 8 + 1
@@ -237,7 +250,7 @@ def fit_cooling(vcool: np.ndarray, tvec: np.ndarray) -> LinearFit:
     fit = np.polynomial.polynomial.polyfit(t, logvcool, 1)
     c0 = math.exp(fit[0])
     tau = -1 / fit[1]
-    logger.debug("Fit paramters %f, %f", c0, 1 / tau)
+    logger.debug("Fit parameters %f, %f", c0, 1 / tau)
     return LinearFit(c0, tau)
 
 
@@ -339,6 +352,7 @@ def main():
     with ProcessPoolExecutor() as ex:
         calibrations = list(ex.map(calibrate_single_channel,
                                    options.channels, repeat(options)))
+
     if not options.terse:
         print("Channel   Sens      Tau       Ioff          Qoff")
     for channel, (sens, tau, ioff, qoff) in zip(options.channels, calibrations):
