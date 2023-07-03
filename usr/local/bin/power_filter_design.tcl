@@ -92,7 +92,7 @@ proc output_coef_data {filt channel binary_point} {
     # but from 1 in software
     set filt_out [linsert $filt_fixed_reordered 0 [expr { $channel-1 } ]]
     # Write to the power coefficients device file
-    write_bin /dev/dsp1.2 filt_out
+    #write_bin /dev/dsp1.2 filt_out
     write_bin "/tmp/power_filter$channel" filt_out
 }
 
