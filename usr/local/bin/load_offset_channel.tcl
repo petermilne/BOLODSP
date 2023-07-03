@@ -50,18 +50,21 @@ proc get_vgain {site physchan} {
 	return $vg
 }
 
+set ch [ lindex $argv 0 ]
+
 read_bin /dev/dsp1.3 offsets
 # for post mortem examine before
-write_bin /tmp/b8_filter_coeffs1 offsets
+write_bin /tmp/b8_filter_coeffs${ch}.1 offsets
 
 # Channels numbered from 1, but list indexed from 0
-set channel [ expr { [ lindex $argv 0 ] - 1 } ]
+
+set ch0 [ expr $ch - 1 ]
 set i0 [ lindex $argv 1 ]
 set q0 [ lindex $argv 2 ]
 set sens [ lindex $argv 3 ]
 # Calculate the volts-to-counts scaling, depends on the gain
-set site [ expr {int($channel / 8) + 1} ]
-set physchan [ expr {int($channel % 8) + 1} ]
+set site [ expr {int($ch0 / 8) + 1} ]
+set physchan [ expr {int($ch0 % 8) + 1} ]
 
 set vgain [ get_vgain $site $physchan ]
 set scale [ expr { $vgain/2**25*20/18 } ]
@@ -72,17 +75,18 @@ set pi0_int [ expr { $sens == 0 ? 0 : int(($i0/$sens)/$pscale) } ]
 set pq0_int [ expr { $sens == 0 ? 0 : int(($q0/$sens)/$pscale) } ]
 # Replace the I0, Q0, PI0 and PQ0 elements of the offsets
 # list with updated values
-set i0_index [ expr { $channel*2 } ]
+set i0_index [ expr { $ch0*2 } ]
 set q0_index [ expr $i0_index+1 ]
 # The power offsets come after the voltage offsets, so
 # after 2*MAXCHAN values
 
-set pi0_index [ expr { 2*($MAXCHAN+$channel) } ]
+set pi0_index [ expr { 2*($MAXCHAN+$ch0) } ]
 set pq0_index [ expr { $pi0_index+1 } ]
 set offsets [ lreplace $offsets $i0_index $q0_index $i0_int $q0_int ]
 set offsets [ lreplace $offsets $pi0_index $pq0_index $pi0_int $pq0_int ]
 
 write_bin /dev/dsp1.3 offsets
 # for post mortem examine before
-write_bin /tmp/b8_filter_coeffs2 offsets
+write_bin /tmp/b8_filter_coeffs${ch}.2 offsets
+
 
