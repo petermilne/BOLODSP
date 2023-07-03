@@ -28,7 +28,6 @@ proc write_bin {fn bdat} {
 	upvar $bdat _bdat
 	set fd [ open $fn w ]
 	puts -nonewline $fd [ binary format i* $_bdat ]
-	flush $fd
 	close $fd
 }
 
@@ -57,7 +56,6 @@ read_bin /dev/dsp1.3 offsets
 write_bin /tmp/b8_filter_coeffs${ch}.1 offsets
 
 # Channels numbered from 1, but list indexed from 0
-
 set ch0 [ expr $ch - 1 ]
 set i0 [ lindex $argv 1 ]
 set q0 [ lindex $argv 2 ]

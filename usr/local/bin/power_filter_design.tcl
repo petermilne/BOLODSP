@@ -67,6 +67,13 @@ proc create_deconvolution_filter {taps_norm dfdt sens tau} {
     return $filt
 }
 
+proc write_bin {fn bdat} {
+	upvar $bdat _bdat
+	set fd [ open $fn w ]
+	puts -nonewline $fd [ binary format i* $_bdat ]
+	close $fd
+}
+
 proc output_coef_data {filt channel binary_point} {
     # Converts filt to fixed point, scaling by 2**binary_point,
     # and formats the filter to be written to the FPGA
@@ -85,9 +92,8 @@ proc output_coef_data {filt channel binary_point} {
     # but from 1 in software
     set filt_out [linsert $filt_fixed_reordered 0 [expr { $channel-1 } ]]
     # Write to the power coefficients device file
-    set fd [ open /dev/dsp1.2 w ]
-    puts -nonewline $fd [ binary format i* $filt_out ]
-    close $fd
+    write_bin /dev/dsp1.2 filt_out
+    write_bin "/tmp/power_filter$channel" filt_out
 }
 
 proc produce_filter_data {NTAPS FC FS ATTEN BINARY_POINT sens tau channel} {
