@@ -27,7 +27,7 @@ fi
 
 if [ -e /etc/acq400/14/BOLO_ACTIVE_CHAN ]; then
 	bac=$(cat /etc/acq400/14/BOLO_ACTIVE_CHAN)
-	if [ ! -z $bac ] && [ "x$bac" != "default" ]; then
+	if [ ! -z $bac ] && [ "$bac" != "default" ]; then
 		BOLO_ACTIVE_CHAN=$(echo $bac | tr , \  )
 	fi
 fi
