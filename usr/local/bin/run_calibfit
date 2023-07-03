@@ -25,6 +25,13 @@ EOF
 fi
 . /mnt/local/sysconfig/bolo.sh
 
+if [ -e /etc/acq400/14/BOLO_ACTIVE_CHAN ]; then
+	bac=$(cat /etc/acq400/14/BOLO_ACTIVE_CHAN)
+	if [ ! -z $bac ] && [ "x$bac" != "default" ]; then
+		BOLO_ACTIVE_CHAN=$(echo $bac | tr , \  )
+	fi
+fi
+
 # Don't do anything if calibration is not enabled.
 if [ "$(get.site 14 CAL_EN)" -eq 0 ]; then
     echo "CAL_EN=0: skipping calibration."

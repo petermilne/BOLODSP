@@ -22,6 +22,7 @@ done
 mkdir /etc/acq400/14/
 ln -s /usr/local/bin/reset.dsp  /etc/acq400/14/PULSE_DSP_RESET
 ln -s /usr/local/bin/set.fdrive /etc/acq400/14/SET_FDRIVE
+echo "default" > /etc/acq400/14/BOLO_ACTIVE_CHAN
 
 /usr/local/CARE/acq400_dspfs.init
 cat /usr/local/CARE/BOLO/bolo8dsp-regdef >/dev/dsp1/.create
