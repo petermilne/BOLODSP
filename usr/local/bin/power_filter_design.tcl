@@ -106,7 +106,7 @@ proc output_coef_data {filt channel binary_point} {
     # The coefficients need to be reordered for the power FIR compiler
     set filt_fixed_reordered [ list {*}[ lrange $filt_fixed 375 499 ] \
 				    {*}[ lrange $filt_fixed 250 374 ] \
-				    {*}[ lrange $filt_fixed 125 249 ] \				   
+				    {*}[ lrange $filt_fixed 125 249 ] \
 				    {*}[ lrange $filt_fixed   0 124 ]]
     # The filter number (effectively the channel number) needs to be pre-prended
     # to the coefficient set before reload. Channels are indexed from 0 on the FPGA,
