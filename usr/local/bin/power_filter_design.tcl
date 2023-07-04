@@ -74,7 +74,7 @@ proc write_bin {fn bdat} {
 	close $fd
 }
 
-proc output_coef_data {filt channel binary_point} {
+proc output_coef_data_2015 {filt channel binary_point} {
     # Converts filt to fixed point, scaling by 2**binary_point,
     # and formats the filter to be written to the FPGA
     set filt_fixed [ list ]
@@ -87,6 +87,27 @@ proc output_coef_data {filt channel binary_point} {
 				   {*}[ lrange $filt_fixed 200 299 ] \
 				   {*}[ lrange $filt_fixed 100 199 ] \
 				   {*}[ lrange $filt_fixed 0 99 ]]
+    # The filter number (effectively the channel number) needs to be pre-prended
+    # to the coefficient set before reload. Channels are indexed from 0 on the FPGA,
+    # but from 1 in software
+    set filt_out [linsert $filt_fixed_reordered 0 [expr { $channel-1 } ]]
+    # Write to the power coefficients device file
+    #write_bin /dev/dsp1.2 filt_out
+    write_bin "/tmp/power_filter$channel" filt_out
+}
+
+proc output_coef_data {filt channel binary_point} {
+    # Converts filt to fixed point, scaling by 2**binary_point,
+    # and formats the filter to be written to the FPGA
+    set filt_fixed [ list ]
+    foreach f $filt {
+	lappend filt_fixed [ expr { int($f * 2**$binary_point) } ]
+    }
+    # The coefficients need to be reordered for the power FIR compiler
+    set filt_fixed_reordered [ list {*}[ lrange $filt_fixed 375 499 ] \
+				    {*}[ lrange $filt_fixed 250 374 ] \
+				    {*}[ lrange $filt_fixed 125 249 ] \				   
+				    {*}[ lrange $filt_fixed   0 124 ]]
     # The filter number (effectively the channel number) needs to be pre-prended
     # to the coefficient set before reload. Channels are indexed from 0 on the FPGA,
     # but from 1 in software
