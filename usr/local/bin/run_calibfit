@@ -141,11 +141,9 @@ then
     done
 fi
 
-# power filter must load ALL channels, if we're using them or not..
 if [ "$LOAD_POWER_FILTERS" -eq 1 ]; then
     nchan=$(get.site 0 NCHAN)
 
-    dd if=/dev/zero bs=4 count=501 of=/tmp/power_filterX
     while read -r ch sens tau ioff qoff
     do
         rv power_filter_design.tcl "$ch" "$sens" "$tau"
@@ -155,14 +153,14 @@ if [ "$LOAD_POWER_FILTERS" -eq 1 ]; then
     set.site 0 transient PRE=1000 SOFT_TRIGGER=1
     set.site 0 set_arm
     wait_until_state 2
+    
     for ch in $(seq 1 $nchan) ; do
-        pff=/tmp/power_filterX
         if [ -e /tmp/power_filter${ch} ]; then
-            pff=/tmp/power_filter${ch}
+            pff=/tmp/power_filter${ch}            
+            cat /tmp/power_filter${ch} /dev/dsp1.2
+            rv echo "$ch $pff"
+            rv wait_for_filters nospawn            
         fi
-        rv echo "$ch $pff"
-        cat $pff > /dev/dsp1.2
-        rv wait_for_filters nospawn
     done
     set.site 0 set_abort
 fi
