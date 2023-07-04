@@ -16,6 +16,7 @@ if { $argc < 4 } {
 # Why 48? MAX 6 x BOLO8 = 48 channels in one box. One size fits all..
 
 set MAXCHAN 48
+set KCORDIC 1.1644353
 
 proc read_bin {fn bdat} {
 	upvar $bdat _bdat
@@ -65,10 +66,12 @@ set site [ expr {int($ch0 / 8) + 1} ]
 set physchan [ expr {int($ch0 % 8) + 1} ]
 
 set vgain [ get_vgain $site $physchan ]
-set scale [ expr { $vgain/2**25*20/18 } ]
+
+set scale [ expr { $vgain*20/(18*2**24*$KCORDIC) } ]
 set i0_int [ expr { int($i0/$scale) } ]
 set q0_int [ expr { int($q0/$scale) } ]
-set pscale [ expr { $vgain/2**19*20/18 } ]
+
+set pscale [ expr { $vgain*20/(18*2**18*$KCORDIC) } ]
 set pi0_int [ expr { $sens == 0 ? 0 : int(($i0/$sens)/$pscale) } ]
 set pq0_int [ expr { $sens == 0 ? 0 : int(($q0/$sens)/$pscale) } ]
 # Replace the I0, Q0, PI0 and PQ0 elements of the offsets
