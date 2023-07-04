@@ -13,9 +13,10 @@
 # After the script returns, the transient capture can be aborted.
 
 wait_until_filter_ready () {
-    filter_status=$(set.site 14 FILTER_STATUS)
+    filter_status=$(get.site 14 FILTER_STATUS)
     voltage_ready=$((0x${filter_status}&0x1))
     power_ready=$(((0x${filter_status}&0x10)>>4))
+    echo "filter_status $filter_status vr $voltage_ready pw $power_ready"
     if [ $voltage_ready -eq 0 -o $power_ready -eq 0 ]
     then
         if [ "$1" != "nospawn" ]
@@ -28,9 +29,10 @@ wait_until_filter_ready () {
         # Poll until the filters are ready
         while true
         do
-            filter_status=$(set.site 14 FILTER_STATUS)
+            filter_status=$(get.site 14 FILTER_STATUS)
             voltage_ready=$((0x${filter_status}&0x1))
             power_ready=$(((0x${filter_status}&0x10)>>4))
+            echo "filter_status $filter_status vr $voltage_ready pw $power_ready"
             if [ $voltage_ready -eq 1 -a $power_ready -eq 1 ]
             then
                 break
