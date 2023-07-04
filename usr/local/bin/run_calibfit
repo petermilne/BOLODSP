@@ -161,7 +161,7 @@ if [ "$LOAD_POWER_FILTERS" -eq 1 ]; then
             pff=/tmp/power_filter${ch}
         fi
         rv echo "$ch $pff"
-        cat $pff > /dev/dsp1.3
+        cat $pff > /dev/dsp1.2
         rv wait_for_filters nospawn
     done
     set.site 0 set_abort
