@@ -157,7 +157,7 @@ if [ "$LOAD_POWER_FILTERS" -eq 1 ]; then
     for ch in $(seq 1 $nchan) ; do
         if [ -e /tmp/power_filter${ch} ]; then
             pff=/tmp/power_filter${ch}            
-            cat /tmp/power_filter${ch} /dev/dsp1.2
+            cat /tmp/power_filter${ch} >/dev/dsp1.2
             rv echo "$ch $pff"
             rv wait_for_filters nospawn            
         fi
