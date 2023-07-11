@@ -361,7 +361,7 @@ def main():
     if not options.terse:
         print("Channel   Sens      Tau       Ioff          Qoff")
     for channel, (sens, tau, ioff, qoff) in zip(options.channels, calibrations):
-        print(f"{channel: <10d}{sens: <14.5g}{tau: <14.5g}{ioff: <14.5g}{qoff:.5g}")
+        print(f"{channel: <10d}{sens: <14.5g}{tau: <14.5g}{ioff: <14.8g}{qoff:<14.8g}")
 
 
 if __name__ == "__main__":

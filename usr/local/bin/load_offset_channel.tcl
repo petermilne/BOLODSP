@@ -16,7 +16,8 @@ if { $argc < 4 } {
 # Why 48? MAX 6 x BOLO8 = 48 channels in one box. One size fits all..
 
 set MAXCHAN 48
-set KCORDIC 1.1644353
+#set KCORDIC 1.1644353
+set KCORDIC 1
 
 proc read_bin {fn bdat} {
 	upvar $bdat _bdat
