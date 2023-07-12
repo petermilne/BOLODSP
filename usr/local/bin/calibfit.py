@@ -94,8 +94,6 @@ logger.debug(IDC_SCALE)
 logger.debug('')
 
 
-# Number of samples to skip due to FPGA filter warmup.
-SKIP = 20
 
 
 # Some more descriptive containers for data returned from functions.
@@ -103,17 +101,35 @@ ChannelData = namedtuple("ChannelData", ["amplitude", "phase", "vdc", "idc", "ti
 LinearFit = namedtuple("LinearFit", ["c0", "tau"])
 FitParams = namedtuple("FitParams", ["sens", "tau", "Ioff", "Qoff"])
 
+
+# Number of samples to skip due to FPGA filter warmup.
+SKIP = 20
 AmpPhaseDcOrdinals = (1, 2, 3)
+
 def _read_channel(channel, nsamples, fileroot):
+    """
+    worker function for read_channel, maps channel function,
+    :param channel: the channel number, from 1 to NCHAN
+    :param nsamples: the number of samples to read
+    :param fileroot: the root directory where the data is stored
+
+    :return [ time, amplitude, phase, dcdata ]
+
+    Strips initial SKIP: samples to avoid filter dead period
+    """
     site = (channel - 1) // 8 + 1
     sitechannel = (channel - 1) % 8 + 1
-    rc = []
+    rc = [ np.arange(nsamples)[SKIP:] ]
     for  physchan in [ (sitechannel-1)*3 + off for off in AmpPhaseDcOrdinals ]:
         fn = f'{fileroot}/{site}/{physchan:02d}'
-        logger.debug(f'read_amp_phase_dc {fn}')
-        rc.append(np.fromfile(fn, np.int32, nsamples))
+#        logger.debug(f'read_amp_phase_dc {fn}')
+        rc.append(np.fromfile(fn, np.int32, nsamples)[SKIP:])
+
     return rc
 
+def _extract_vdc_idc(dcdata):
+    """ 3rd channel encodes vdc, idc as two 16 bit fields in a 32 bit number. extract them """ 
+    return (dcdata // 2**16, dcdata.view(np.uint32) % 2**16)
 
 def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> ChannelData:
     """
@@ -126,39 +142,10 @@ def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> Ch
     :return: a tuple (amplitude, phase, vdc, idc, time) of arrays
     """
     logger.debug(f'idc ch:{channel} scale:{IDC_SCALE[channel]}')
-
-    site = (channel - 1) // 8 + 1
-    sitechannel = (channel - 1) % 8 + 1
-    ampchannel = (sitechannel - 1) * 3 + 1
-    phasechannel = (sitechannel - 1) * 3 + 2
-    dcchannel = (sitechannel - 1) * 3 + 3
-    datadir = fileroot / f"{site}"
-    ampfile = datadir / f"{ampchannel:02d}"
-    phasefile = datadir / f"{phasechannel:02d}"
-    dcfile = datadir / f"{dcchannel:02d}"
-    # np.fromfile only gained support for Path objects in 1.17: use str for 1.16.
-    logger.debug(f'ampfile {ampfile}')
-    amplitude = np.fromfile(str(ampfile), np.int32, nsamples)
-    logger.debug(f'phasefile {phasefile}')
-    phase = np.fromfile(str(phasefile), np.int32, nsamples)
-    logger.debug(f'dcfile {dcfile}')
-    dcdata = np.fromfile(str(dcfile), np.int32, nsamples)
- 
-    logger.debug("pgmwashere: try oneliner for read_amp_phase_dc")
-    apd = _read_channel(channel, nsamples, fileroot)
-    for ix, chx in enumerate((amplitude, phase, dcdata)):
-        logger.debug(f'pgm {ix} {np.array_equal(apd[ix], chx)}')
         
-#    amplitude, phase, dcdata = read_amp_phase_dc(ch, nsamples)
-    vdc = (dcdata // 2**16)
-    idc = (dcdata.view(np.uint32) % 2**16)
-    time = np.arange(nsamples)
-    # Trim off samples from incomplete filter output.
-    amplitude = amplitude[SKIP:]
-    phase = phase[SKIP:]
-    vdc = vdc[SKIP:]
-    idc = idc[SKIP:]
-    time = time[SKIP:]
+    time, amplitude, phase, dcdata = _read_channel(channel, nsamples, fileroot)
+    vdc, idc = _extract_vdc_idc(dcdata)
+
     # Convert to physical units. Use float32 to save memory and speed up arithmetic.
     vgain = GAIN_PV[gainpv]
     amplitude = (amplitude * vgain * AMP_SCALE).astype(np.float32)
