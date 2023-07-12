@@ -223,6 +223,7 @@ def calculate_offset(voltage: np.ndarray) -> float:
     :param voltage: voltage data (I or Q) from the twait part of the data
     :return: the voltage offset
     """
+    logger.debug(f"calculate_offset over len:{len(voltage)} mean:{voltage.mean()} mean_item:{voltage.mean().item()}")
     return voltage.mean().item()
 
 
