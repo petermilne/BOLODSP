@@ -103,6 +103,17 @@ ChannelData = namedtuple("ChannelData", ["amplitude", "phase", "vdc", "idc", "ti
 LinearFit = namedtuple("LinearFit", ["c0", "tau"])
 FitParams = namedtuple("FitParams", ["sens", "tau", "Ioff", "Qoff"])
 
+AmpPhaseDcOrdinals = (1, 2, 3)
+def _read_channel(channel, nsamples, fileroot):
+    site = (channel - 1) // 8 + 1
+    sitechannel = (channel - 1) % 8 + 1
+    rc = []
+    for  physchan in [ (sitechannel-1)*3 + off for off in AmpPhaseDcOrdinals ]:
+        fn = f'{fileroot}/{site}/{physchan:02d}'
+        logger.debug(f'read_amp_phase_dc {fn}')
+        rc.append(np.fromfile(fn, np.int32, nsamples))
+    return rc
+
 
 def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> ChannelData:
     """
@@ -126,9 +137,19 @@ def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> Ch
     phasefile = datadir / f"{phasechannel:02d}"
     dcfile = datadir / f"{dcchannel:02d}"
     # np.fromfile only gained support for Path objects in 1.17: use str for 1.16.
+    logger.debug(f'ampfile {ampfile}')
     amplitude = np.fromfile(str(ampfile), np.int32, nsamples)
+    logger.debug(f'phasefile {phasefile}')
     phase = np.fromfile(str(phasefile), np.int32, nsamples)
+    logger.debug(f'dcfile {dcfile}')
     dcdata = np.fromfile(str(dcfile), np.int32, nsamples)
+ 
+    logger.debug("pgmwashere: try oneliner for read_amp_phase_dc")
+    apd = _read_channel(channel, nsamples, fileroot)
+    for ix, chx in enumerate((amplitude, phase, dcdata)):
+        logger.debug(f'pgm {ix} {np.array_equal(apd[ix], chx)}')
+        
+#    amplitude, phase, dcdata = read_amp_phase_dc(ch, nsamples)
     vdc = (dcdata // 2**16)
     idc = (dcdata.view(np.uint32) % 2**16)
     time = np.arange(nsamples)
