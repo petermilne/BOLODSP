@@ -55,7 +55,7 @@ set ch [ lindex $argv 0 ]
 
 read_bin /dev/dsp1.3 offsets
 # for post mortem examine before
-write_bin /tmp/b8_filter_coeffs${ch}.1 offsets
+write_bin /tmp/b8_offsets${ch}.1 offsets
 
 # Channels numbered from 1, but list indexed from 0
 set ch0 [ expr $ch - 1 ]
@@ -89,6 +89,6 @@ set offsets [ lreplace $offsets $pi0_index $pq0_index $pi0_int $pq0_int ]
 
 write_bin /dev/dsp1.3 offsets
 # for post mortem examine before
-write_bin /tmp/b8_filter_coeffs${ch}.2 offsets
+write_bin /tmp/b8_offsets${ch}.2 offsets
 
 

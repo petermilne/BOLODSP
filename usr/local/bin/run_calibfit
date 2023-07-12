@@ -118,8 +118,9 @@ bolo_calibration
 
 [ "$BOLO_VERBOSE" -eq 1 ] && echo "Fitting data"
 export CALIBFIT_EXCITEV
+
 /usr/local/bin/calibfit.py -t -n "$nsamples" -g "$BOLO_GAIN" $CALIBFITARGS $BOLO_ACTIVE_CHAN > /tmp/calibfit.log
-[ "$BOLO_VERBOSE" -eq 1 ] && cat /tmp/calibfit.log
+[ $BOLO_VERBOSE -eq 1 ] && cat /tmp/calibfit.log
 
 # Copy calib data so it doesn't get overwritten
 if [ "$COPY_CALIB_DATA" -eq 1 ]
