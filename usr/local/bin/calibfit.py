@@ -157,7 +157,7 @@ def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> Ch
 
 
 def get_preheating_indices(vdc: np.ndarray,
-                           heating_threshold: float,
+                           heating_start: int,
                            cooling_threshold: float) -> np.ndarray:
     """
     Return the array indices corresponding to the period before heating.
@@ -167,13 +167,11 @@ def get_preheating_indices(vdc: np.ndarray,
     same as the cooling phase.
 
     :param vdc: the DC voltage data for a single channel
-    :param heating_threshold: DC voltage above which to consider heating
+    :param heating_start: sample where heating has been found to start.
     :param cooling_threshold: DC voltage below which to consider no heating
     :return: the indices in vdc for the pre-heating period
-    """
-    heating_indices = get_heating_indices(vdc, heating_threshold)
+    """    
     nonheating_indices = np.flatnonzero(vdc < cooling_threshold)
-    heating_start = heating_indices.min()
     preheating_indices = nonheating_indices[nonheating_indices < heating_start]
     return preheating_indices
 
@@ -306,7 +304,8 @@ def calibrate_single_channel(channel: int,
     try:
         amp, phase, vdc, idc, time = read_channel(channel, options.nsamples,
                                                   options.gainpv, options.root_dir)
-        preheating_indices = get_preheating_indices(vdc, options.heating_threshold,
+        heating_indices = get_heating_indices(vdc, options.heating_threshold)
+        preheating_indices = get_preheating_indices(vdc, heating_indices.min(),
                                                     options.cooling_threshold)
         heating_indices = get_heating_indices(vdc, options.heating_threshold)
         cooling_indices = get_cooling_indices(vdc, options.cooling_threshold,
