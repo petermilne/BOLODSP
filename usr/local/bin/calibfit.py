@@ -322,8 +322,10 @@ def calibrate_single_channel(channel: int,
         # linearly decreasing. Depending on the phase, the trace may need to be
         # inverted.
         if Icool[:100].mean() < Icool[-100:].mean():
+            logger.debug(f"ch:{channel} flip Icool Ioff:{Ioff} len:{len(cooling_indices)}")
             Icool = -Icool
         if Qcool[:100].mean() < Qcool[-100:].mean():
+            logger.debug(f"ch:{channel} flip Qcool Qoff:{Qoff} len:{len(cooling_indices)}")
             Qcool = -Qcool
         c0_I, tau_I = fit_cooling(Icool, tcool)
         c0_Q, tau_Q = fit_cooling(Qcool, tcool)
@@ -360,12 +362,19 @@ def main():
                         help="Omit headers from output")
     parser.add_argument("-g", "--gainpv", choices=list(GAIN_PV),
                         help="B8:GAIN value used for all channels to calibrate.")
+    parser.add_argument("-m", "--multithread", default=0, help="set to 1 to enable multiprocessing: cool, but unlikely to be faster on Zynq at least")
     parser.add_argument("channels", type=int, nargs="+",
                         help="Channels to calibrate")
     options = parser.parse_args()
-    with ProcessPoolExecutor() as ex:
-        calibrations = list(ex.map(calibrate_single_channel,
+
+    if options.multithread:
+        with ProcessPoolExecutor() as ex:
+            calibrations = list(ex.map(calibrate_single_channel,
                                    options.channels, repeat(options)))
+    else:
+        calibrations = []
+        for ch in options.channels:
+            calibrations.append(calibrate_single_channel(ch, options))
 
     if not options.terse:
         print("Channel   Sens      Tau       Ioff          Qoff")
