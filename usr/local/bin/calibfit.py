@@ -78,8 +78,6 @@ def get_current_scale():
 # cat /etc/acq400/1/SERIAL
 # BE4010063
 # 0123456789
-
-
     for s in sites:
         with open(f'/etc/acq400/{s}/SERIAL') as fp:
             sn = int(fp.readlines()[0][5:9])
@@ -151,7 +149,7 @@ def read_channel(channel: int, nsamples: int, gainpv: str, fileroot: Path) -> Ch
     amplitude = (amplitude * vgain * AMP_SCALE).astype(np.float32)
     phase = (phase * PHASE_SCALE).astype(np.float32)
     vdc = (vdc * vgain * VDC_SCALE).astype(np.float32)
-    idc = (idc * IDC_SCALE[channel]) .astype(np.float32)
+    idc = (idc * IDC_SCALE[channel]).astype(np.float32)
     time = (time / SAMPLE_RATE).astype(np.float32)
     return ChannelData(amplitude, phase, vdc, idc, time)
 
@@ -221,7 +219,6 @@ def calculate_offset(voltage: np.ndarray) -> float:
     :param voltage: voltage data (I or Q) from the twait part of the data
     :return: the voltage offset
     """
-    logger.debug(f"calculate_offset over len:{len(voltage)} mean:{voltage.mean()} mean_item:{voltage.mean().item()}")
     return voltage.mean().item()
 
 
@@ -321,10 +318,10 @@ def calibrate_single_channel(channel: int,
         # linearly decreasing. Depending on the phase, the trace may need to be
         # inverted.
         if Icool[:100].mean() < Icool[-100:].mean():
-            logger.debug(f"ch:{channel} flip Icool Ioff:{Ioff} len:{len(cooling_indices)}")
+            logger.debug(f"ch:{channel} flip Icool:{Icool}/{len(cooling_indices)} Ioff:{Ioff}/{len(preheating_indices)}")
             Icool = -Icool
         if Qcool[:100].mean() < Qcool[-100:].mean():
-            logger.debug(f"ch:{channel} flip Qcool Qoff:{Qoff} len:{len(cooling_indices)}")
+            logger.debug(f"ch:{channel} flip Qcool:{Qcool}/{len(cooling_indices)} Qoff:{Qoff}/{len(preheating_indices)}")
             Qcool = -Qcool
         c0_I, tau_I = fit_cooling(Icool, tcool)
         c0_Q, tau_Q = fit_cooling(Qcool, tcool)
