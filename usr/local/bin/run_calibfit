@@ -4,6 +4,8 @@
 # runs under inetd at port 0xb010 (45072)
 export PATH=$PATH:/usr/local/bin/
 
+
+
 if [ ! -e /mnt/local/sysconfig/bolo.sh ]; then
 cat - >/mnt/local/sysconfig/bolo.sh <<EOF
 BOLO_ACTIVE_CHAN="1 2 3 4 5 6 7 8"
@@ -38,6 +40,8 @@ if [ "$(get.site 14 CAL_EN)" -eq 0 ]; then
     echo "END"
     exit
 fi
+
+caput $(hostname):B8:CALIBRATING 1
 
 # Provide default values where necessary.
 BOLO_VERBOSE=${BOLO_VERBOSE:-1}
@@ -181,4 +185,5 @@ set.site 0 transient "$orig_transient"
 
 /usr/local/bin/web_diagnostics_cal
 /usr/local/bin/web_diagnostics_ram
+caput $(hostname):B8:CALIBRATING 0
 echo "END"
