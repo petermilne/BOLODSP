@@ -23,6 +23,8 @@ logger.setLevel(os.environ.get("LOGLEVEL", "INFO"))
 logger.addHandler(logging.StreamHandler())
 include_traceback = (logger.level == logging.DEBUG)
 
+DEFAULT_MULTITHREAD = int(os.environ.get("CALIBFIT_MULTITHREAD", "1"))
+
 
 # Raw data scale factors.
 # Amplitude scale depends on EXCITEV and CORDIC scale factor Z_n.
@@ -318,10 +320,10 @@ def calibrate_single_channel(channel: int,
         # linearly decreasing. Depending on the phase, the trace may need to be
         # inverted.
         if Icool[:100].mean() < Icool[-100:].mean():
-            logger.debug(f"ch:{channel} flip Icool:{Icool}/{len(cooling_indices)} Ioff:{Ioff}/{len(preheating_indices)}")
+            logger.debug(f"ch:{channel} flip Icool:{Icool.mean():10.4g}/{len(cooling_indices)} Ioff:{Ioff:10.4g}/{len(preheating_indices)}")
             Icool = -Icool
         if Qcool[:100].mean() < Qcool[-100:].mean():
-            logger.debug(f"ch:{channel} flip Qcool:{Qcool}/{len(cooling_indices)} Qoff:{Qoff}/{len(preheating_indices)}")
+            logger.debug(f"ch:{channel} flip Qcool:{Qcool.mean():10.4g}/{len(cooling_indices)} Qoff:{Qoff:10.4g}/{len(preheating_indices)}")
             Qcool = -Qcool
         c0_I, tau_I = fit_cooling(Icool, tcool)
         c0_Q, tau_Q = fit_cooling(Qcool, tcool)
@@ -358,7 +360,7 @@ def main():
                         help="Omit headers from output")
     parser.add_argument("-g", "--gainpv", choices=list(GAIN_PV),
                         help="B8:GAIN value used for all channels to calibrate.")
-    parser.add_argument("-m", "--multithread", default=0, help="set to 1 to enable multiprocessing: cool, but unlikely to be faster on Zynq at least")
+    parser.add_argument("-m", "--multithread", default=DEFAULT_MULTITHREAD, help="set to 1 to enable multiprocessing: cool, but unlikely to be faster on Zynq at least")
     parser.add_argument("channels", type=int, nargs="+",
                         help="Channels to calibrate")
     options = parser.parse_args()
