@@ -17,6 +17,41 @@
 const float AMP	= 1.25 * 5.688e-8;
 const float PHI = 1.863e-9;
 
+#define OFF_I	0
+#define OFF_Q	1
+
+#define PAGE_LEN	4096
+
+const float OSCALE = 1.25*20/(18*(1<<24));
+const float ROSCALE = 1.0/OSCALE;
+
+#define NCHANBUILD	48
+
+void write_offsets(float* offsets, int nc)
+{
+	FILE* fp = fopen("/dev/dsp1.3", "r+");
+	if (fp == 0){
+		perror("/dev/dsp1.3");
+		exit(1);
+	}
+        int* pdata = (int *)mmap(0, PAGE_LEN, PROT_READ|PROT_WRITE, MAP_SHARED, fileno(fp), 0);
+        if (pdata == MAP_FAILED){
+                perror("mmap");
+                exit(1);
+        }
+	int* to = pdata + NCHANBUILD*2;
+	float* from = offsets;
+
+	for (int ic = 0; ic < nc; ++ic, from += 2, to += 2){
+	        if (ic >=8 && ic <= 10){
+//			fprintf(stderr, "%2d %10.4g->%d %10.4g->%d\n", ic+1, from[RE], (int)(from[RE]*ROSCALE), from[IM], (int)(from[IM]*ROSCALE));
+			to[OFF_I] = (int)(from[RE]*ROSCALE);
+			to[OFF_Q] = (int)(from[IM]*ROSCALE);
+		}
+	}
+        munmap(pdata, PAGE_LEN);
+        fclose(fp);
+}
 int process(const int nc, int& nsam, int& skip, int *data) {
 	
 	float* offsets = new float[nc*2];
@@ -25,20 +60,22 @@ int process(const int nc, int& nsam, int& skip, int *data) {
 
 	int* cursor = data + nc*WPC*skip;
 	for (int sam = 0; sam < nsam; ++sam, cursor += ssize){
-		for (int ch = 0; ch < nc; ++ch){
-			int _mag = cursor[ch*WPC + IMAG];
-			int _phi = cursor[ch*WPC + IPHI];
+		for (int ic = 0; ic < nc; ++ic){
+			int _mag = cursor[ic*WPC + IMAG];
+			int _phi = cursor[ic*WPC + IPHI];
 
 			double mag = _mag * AMP;
 			double phi = _phi * PHI;
 
-			offsets[2*ch+RE] += 0.5 * mag * cos(phi);
-			offsets[2*ch+IM] += -0.5 * mag * sin(phi);
+			offsets[2*ic+RE] += 0.5 * mag * cos(phi);
+			offsets[2*ic+IM] += -0.5 * mag * sin(phi);
 		}
 	}
-	for (int ch = 0; ch < nc; ++ch){
-	        if (ch >=8 && ch <= 10){
-			fprintf(stderr, "%2d %10.6f %10.6f\n", ch+1, offsets[2*ch+RE]/nsam, offsets[2*ch+IM]/nsam);
+	write_offsets(offsets, nc);
+	system("/usr/local/bin/web_diagnostics_ram");
+	for (int ic = 0; ic < nc; ++ic){
+	        if (ic >=8 && ic <= 10){
+			fprintf(stderr, "%2d %10.4g %10.4g\n", ic+1, offsets[2*ic+RE]/nsam, offsets[2*ic+IM]/nsam);
 		}
 	}
 	return 1;
