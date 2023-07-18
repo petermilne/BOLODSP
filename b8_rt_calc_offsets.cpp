@@ -1,5 +1,25 @@
 /* calculate I0, Q0 from nsam */
 
+/* runs at dark patch at beginning of capture
+ * suggested usage
+ * b8_rt_calc_offsets < /dev/acq400.0.bq # .bq feeds each buffer as it is filled
+ *
+ * Drops out when it's had enough data. Usually first buffer
+ *
+ * May be run automatically by run_calibfit if BOLO_LOAD_OFFSETS=2 or more
+ * That method really assumes one cal one cap. It may not be necessary.
+ * It's probably sufficient to run b8_rt_calc_offsets as a daemon that runs once per
+ * shot (not done so far: a simple
+ * while[1] do b8_rt_calc... ; done
+ * is a bad idea it will cause havoc).
+ *
+ * This seems to be effective: it follows the same method as host based offset
+ * eg plot_acq123_sos.py and computes the same values
+ *
+ * LIMITATIONS: will probably FAIL with >16ch as a single buffer may not be long enough
+ * should be extended to handle multiple buffers.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <cstdlib>
@@ -301,5 +321,4 @@ int main(int argc, char* argv[])
 		munmap(pdata, len);
 		fclose(fp);
 	}
-
 }
