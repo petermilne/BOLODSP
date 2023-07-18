@@ -47,8 +47,9 @@ proc get_vgain {site physchan} {
 	# amount of time.
 	set a0 [read_knob /dev/bolo8/${site}/ADC_${physchan}_A0 ]
 	set a1 [read_knob /dev/bolo8/${site}/ADC_${physchan}_A1 ]
-	set vg [ expr { 10.0 / (1 << ($a1<<1 + $a0)) } ]
-	return $vg
+	set vg [ expr { 10.0 / (1 << (($a1<<1) + $a0)) } ]
+	set fudge [expr $vg / 2 ]
+	return $fudge
 }
 
 set ch [ lindex $argv 0 ]
