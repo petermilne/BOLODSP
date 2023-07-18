@@ -57,10 +57,16 @@ public:
 };
 
 /* ref load_offset_channel.tcl, scale, pscale */
-const float MSCALE = 1.25*20/(18*(1<<24));   // Magnitude Scale
+const float Z_30 = 1.1644353455059144;
+const float GAIN_PV = 1.25;
+const int PK2PK = 2;
+
+/* offsets are upstream so Z_30 not required */
+
+const float MSCALE = PK2PK*GAIN_PV*20/(18*(1<<24));   // Magnitude Scale
 const float RMSCALE = 1.0/MSCALE;            // prefer reciprocal for live multiply
 
-const float PSCALE = 1.25*20/(18*(1<<18));   // Magnitude Scale
+const float PSCALE = PK2PK*1.25*20/(18*(1<<18));   // Magnitude Scale
 const float RPSCALE = 1.0/PSCALE;            // prefer reciprocal for live multiply
 
 float SENS[NCHANBUILD];
@@ -85,24 +91,27 @@ void write_offsets(float* offsets, int nc)
 	for (int ch: G_active_chan){
 		int ic = ch - 1;
 		int ic2 = ic*2;
-		fprintf(stderr, "%2d: mag: %10.4g -> %d %10.4g->%d pwr: %10.4g -> %d %10.4g->%d\n", ch,
-				from[ic2+RE]*RMSCALE, int(from[ic2+RE]*RMSCALE),
-				from[ic2+IM]*RMSCALE, int(from[ic2+IM]*RMSCALE),
-				from[ic2+RE]*RPSCALE/SENS[ic], int(from[ic2+RE]*RPSCALE/SENS[ic]),
-				from[ic2+IM]*RPSCALE/SENS[ic], int(from[ic2+IM]*RPSCALE/SENS[ic]));
+		fprintf(stderr, "%2d: mag: %d %d pwr: %d %d\n", ch,
+				int(from[ic2+RE]*RMSCALE),
+				int(from[ic2+IM]*RMSCALE),
+				int(from[ic2+RE]*RPSCALE/SENS[ic]),
+				int(from[ic2+IM]*RPSCALE/SENS[ic]));
 	}
 }
 
 void zero_offsets(void)
 {
 	DSP_MAP dsp_map;
-	int* to = dsp_map.pdata + NCHANBUILD*2;
+	int* to_m = dsp_map.pdata;
+	int* to_p = dsp_map.pdata + NCHANBUILD*2;
 
 	for (int ch: G_active_chan){
 		int ic = ch - 1;
 		int ic2 = ic*2;
-		to[ic2+OFF_I] = 0;
-		to[ic2+OFF_Q] = 0;
+		to_m[ic2+OFF_I] = 0;
+		to_m[ic2+OFF_Q] = 0;
+		to_p[ic2+OFF_I] = 0;
+		to_p[ic2+OFF_Q] = 0;
 	}
 }
 
@@ -137,8 +146,8 @@ int process(const int nc, int& nsam, int& skip, int *data) {
 		offsets[2*ic+RE] /= nsam;
 		offsets[2*ic+IM] /= nsam;
 	}
-	write_offsets(offsets, nc);
-	system("/usr/local/bin/web_diagnostics_ram");
+	//write_offsets(offsets, nc);
+	//system("/usr/local/bin/web_diagnostics_ram");
 	for (int ic = 0; ic < nc; ++ic){
 	        if (ic >=8 && ic <= 10){
 			fprintf(stderr, "%2d sens:%10.4g tau:%10.4g re:%10.4g im:%10.4g\n", ic+1, SENS[ic], 0.123, offsets[2*ic+RE], offsets[2*ic+IM]);
@@ -210,14 +219,14 @@ void read_cal(void)
 		if (sscanf(line, "%d %f %f %f %f", &ch, &sens, &tau, &i0, &q0) == 5){
 			if (ch >= 1 && ch <= NCHANBUILD){
 				SENS[ch-1] = sens;
-				fprintf(stderr, "%2d: %.5e OK\n", ch, sens);
+				//fprintf(stderr, "%2d: %.5e OK\n", ch, sens);
 			}else{
 				status = "ERR ch";
 			}
 		}else{
 			status = "ERR conv";
 		}
-		fprintf(stderr, "%d:%s:%s", ii, status, line);
+		//fprintf(stderr, "%d:%s:%s", ii, status, line);
 	}
 
 	fclose(fp);
@@ -234,7 +243,7 @@ int main(int argc, char* argv[])
 	}
 
 	int nsam = getenv_default("B8_RT_CALC_NSAM", 1000);
-	int skip = getenv_default("B8_RT_CALC_SKIP", 1000);
+	int skip = getenv_default("B8_RT_CALC_SKIP", 100);
 
 	unsigned nc;
 	getEtcKnob(0, "NCHAN", &nc, "%u");  nc /= 3;    // NCHAN has nphys*3, we want nphys
@@ -246,7 +255,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	read_cal();
-	zero_offsets();
+	//zero_offsets();
 
 
 	int ub;
