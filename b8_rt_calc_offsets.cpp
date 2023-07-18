@@ -106,8 +106,8 @@ void zero_offsets(void)
 	}
 }
 
-const float AMP	= 1.25 * 5.688e-8;
-const float PHI = 1.863e-9;
+const float AMP	= 1.25 * 5.688e-8;      // (#1) constants from plot_acq123_sos.py
+const float PHI = 1.863e-9;		// same as PHASE_SCALE = 2**-29 from calibfit
 
 int process(const int nc, int& nsam, int& skip, int *data) {
 	
@@ -116,6 +116,7 @@ int process(const int nc, int& nsam, int& skip, int *data) {
 	const int ssize = nc*WPC;
 
 	int* cursor = data + nc*WPC*skip;
+	/* polar -> rectangular, sum I, sum Q. */
 	for (int sam = 0; sam < nsam; ++sam, cursor += ssize){
 		for (int ic = 0; ic < nc; ++ic){
 			int _mag = cursor[ic*WPC + IMAG];
@@ -124,10 +125,14 @@ int process(const int nc, int& nsam, int& skip, int *data) {
 			double mag = _mag * AMP;
 			double phi = _phi * PHI;
 
-			offsets[2*ic+RE] += 0.5 * mag * cos(phi);
+			offsets[2*ic+RE] += 0.5 * mag * cos(phi);    // (#2) trig from calibfit.py
 			offsets[2*ic+IM] += -0.5 * mag * sin(phi);
+								/* SOS.py uses : V = A * np.exp(-1j * phi)
+								 * Question: is this exactly equivalent?
+								 */
 		}
 	}
+	/* mean */
 	for (int ic = 0; ic < nc; ++ic){
 		offsets[2*ic+RE] /= nsam;
 		offsets[2*ic+IM] /= nsam;
@@ -182,7 +187,7 @@ int getenv_default(const char* key, int def){
 /* .. should be in a library */
 
 
-#define SENS_DIV2ZERO	1e12		/* if we dived by this the int result will be zero */
+#define SENS_DIV2ZERO	1e12		/* if we divided by this the int result will be zero */
 
 void read_cal(void)
 /* populate the SENS array, from previous cal */
