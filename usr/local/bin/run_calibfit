@@ -96,7 +96,7 @@ set_gains_reset_os_dacs
 [ "$BOLO_VERBOSE" -eq 1 ] && echo "calibration starts for channels \"$BOLO_ACTIVE_CHAN\""
 
 
-if [ "$BOLO_LOAD_OFFSETS" -eq 1 ]; then
+if [ "$BOLO_LOAD_OFFSETS" -ge 1 ]; then
 for ch in $BOLO_ACTIVE_CHAN
 do
          load_offset_channel.tcl "$ch" 0 0 1
@@ -170,11 +170,16 @@ if [ "$LOAD_POWER_FILTERS" -eq 1 ]; then
     set.site 0 set_abort
 fi
 
-if [ "$BOLO_LOAD_OFFSETS" -eq 1 ]; then
+if [ "$BOLO_LOAD_OFFSETS" -ge 1 ]; then
     while read -r ch sens tau ioff qoff
     do
         rv load_offset_channel.tcl "$ch" "$ioff" "$qoff" "$sens"
     done < /tmp/calibfit.log
+    
+    if [ "$BOLO_LOAD_OFFSETS" -ge 2 ]; then
+        export BOLO_LOAD_OFFSETS
+        b8_rt_calc_offsets 2>/tmp/b8_rt_calc_offsets.log </dev/acq400.0.bq &        # one cal, one cap
+    fi 
 fi
 
 reset.dsp
@@ -185,5 +190,8 @@ set.site 0 transient "$orig_transient"
 
 /usr/local/bin/web_diagnostics_cal
 /usr/local/bin/web_diagnostics_ram
+
+
+
 caput $(hostname):B8:CALIBRATING 0
 echo "END"
