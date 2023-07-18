@@ -29,9 +29,6 @@
 
 #define PAGE_LEN	4096
 
-const float OSCALE = 1.25*20/(18*(1<<24));
-const float ROSCALE = 1.0/OSCALE;
-
 #define NCHANBUILD	48
 
 std::vector<int> G_active_chan;
@@ -58,24 +55,41 @@ public:
 	        fclose(fp);
 	}
 };
+
+/* ref load_offset_channel.tcl, scale, pscale */
+const float MSCALE = 1.25*20/(18*(1<<24));   // Magnitude Scale
+const float RMSCALE = 1.0/MSCALE;            // prefer reciprocal for live multiply
+
+const float PSCALE = 1.25*20/(18*(1<<18));   // Magnitude Scale
+const float RPSCALE = 1.0/PSCALE;            // prefer reciprocal for live multiply
+
+float SENS[NCHANBUILD];
+
 void write_offsets(float* offsets, int nc)
 {
 	DSP_MAP dsp_map;
-	int* to = dsp_map.pdata + NCHANBUILD*2;
+	int* to_m = dsp_map.pdata;
+	int* to_p = dsp_map.pdata + NCHANBUILD*2;
 	float* from = offsets;
 
 	for (int ch: G_active_chan){
 		int ic = ch - 1;
 		int ic2 = ic*2;
-		to[ic2+OFF_I] = int(from[ic2+RE]*ROSCALE);
-		to[ic2+OFF_Q] = int(from[ic2+IM]*ROSCALE);
+		to_m[ic2+OFF_I] = int(from[ic2+RE]*RMSCALE);
+		to_m[ic2+OFF_Q] = int(from[ic2+IM]*RMSCALE);
+
+		to_p[ic2+OFF_I] = int(from[ic2+RE]*RPSCALE/SENS[ic]);
+		to_p[ic2+OFF_Q] = int(from[ic2+IM]*RPSCALE/SENS[ic]);
 	}
+
 	for (int ch: G_active_chan){
 		int ic = ch - 1;
 		int ic2 = ic*2;
-		fprintf(stderr, "%2d: %10.4g->%d %10.4g->%d\n", ch,
-				from[ic2+RE]*ROSCALE, int(from[ic2+RE]*ROSCALE),
-				from[ic2+IM]*ROSCALE, int(from[ic2+IM]*ROSCALE));
+		fprintf(stderr, "%2d: mag: %10.4g -> %d %10.4g->%d pwr: %10.4g -> %d %10.4g->%d\n", ch,
+				from[ic2+RE]*RMSCALE, int(from[ic2+RE]*RMSCALE),
+				from[ic2+IM]*RMSCALE, int(from[ic2+IM]*RMSCALE),
+				from[ic2+RE]*RPSCALE/SENS[ic], int(from[ic2+RE]*RPSCALE/SENS[ic]),
+				from[ic2+IM]*RPSCALE/SENS[ic], int(from[ic2+IM]*RPSCALE/SENS[ic]));
 	}
 }
 
@@ -122,7 +136,7 @@ int process(const int nc, int& nsam, int& skip, int *data) {
 	system("/usr/local/bin/web_diagnostics_ram");
 	for (int ic = 0; ic < nc; ++ic){
 	        if (ic >=8 && ic <= 10){
-			fprintf(stderr, "%2d %10.4g %10.4g\n", ic+1, offsets[2*ic+RE]/nsam, offsets[2*ic+IM]/nsam);
+			fprintf(stderr, "%2d sens:%10.4g tau:%10.4g re:%10.4g im:%10.4g\n", ic+1, SENS[ic], 0.123, offsets[2*ic+RE], offsets[2*ic+IM]);
 		}
 	}
 	return 1;
@@ -167,6 +181,43 @@ int getenv_default(const char* key, int def){
 }
 /* .. should be in a library */
 
+
+#define SENS_DIV2ZERO	1e12		/* if we dived by this the int result will be zero */
+
+void read_cal(void)
+/* populate the SENS array, from previous cal */
+{
+	for (int ic = 0; ic < NCHANBUILD; ++ic){
+		SENS[ic] = SENS_DIV2ZERO;
+	}
+	FILE* fp = fopen("/tmp/calibfit.log", "r");
+	if (fp == 0){
+		perror("/tmp/calibfit.log");
+		return;
+	}
+	char line[132];
+	int ii = 0;
+	while(fgets(line, 132, fp)){
+		float sens, tau, i0, q0;
+		int ch;
+		const char* status;
+		++ii;
+		if (sscanf(line, "%d %f %f %f %f", &ch, &sens, &tau, &i0, &q0) == 5){
+			if (ch >= 1 && ch <= NCHANBUILD){
+				SENS[ch-1] = sens;
+				fprintf(stderr, "%2d: %.5e OK\n", ch, sens);
+			}else{
+				status = "ERR ch";
+			}
+		}else{
+			status = "ERR conv";
+		}
+		fprintf(stderr, "%d:%s:%s", ii, status, line);
+	}
+
+	fclose(fp);
+}
+
 int main(int argc, char* argv[])
 {
 	unsigned calibration;
@@ -189,6 +240,7 @@ int main(int argc, char* argv[])
 			G_active_chan.push_back(ch);
 		}
 	}
+	read_cal();
 	zero_offsets();
 
 
