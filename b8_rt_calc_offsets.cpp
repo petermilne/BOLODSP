@@ -59,7 +59,7 @@ public:
 /* ref load_offset_channel.tcl, scale, pscale */
 const float Z_30 = 1.1644353455059144;
 const float GAIN_PV = 1.25;
-const int PK2PK = 2;
+const float PK2PK = 0.5;
 
 /* offsets are upstream so Z_30 not required */
 
@@ -69,7 +69,11 @@ const float RMSCALE = 1.0/MSCALE;            // prefer reciprocal for live multi
 const float PSCALE = PK2PK*1.25*20/(18*(1<<18));   // Magnitude Scale
 const float RPSCALE = 1.0/PSCALE;            // prefer reciprocal for live multiply
 
+
+/* values from calibfit. Only SENS is needed but I0, Q0 good for debug */
 float SENS[NCHANBUILD];
+float I0[NCHANBUILD];
+float Q0[NCHANBUILD];
 
 void write_offsets(float* offsets, int nc)
 {
@@ -91,7 +95,8 @@ void write_offsets(float* offsets, int nc)
 	for (int ch: G_active_chan){
 		int ic = ch - 1;
 		int ic2 = ic*2;
-		fprintf(stderr, "%2d: mag: %d %d pwr: %d %d\n", ch,
+		fprintf(stderr, "%2d: re:%10.4g im:%10.4g mag: %d %d pwr: %d %d\n", ch,
+				from[ic2+RE], from[ic2+IM],
 				int(from[ic2+RE]*RMSCALE),
 				int(from[ic2+IM]*RMSCALE),
 				int(from[ic2+RE]*RPSCALE/SENS[ic]),
@@ -146,7 +151,7 @@ int process(const int nc, int& nsam, int& skip, int *data) {
 		offsets[2*ic+RE] /= nsam;
 		offsets[2*ic+IM] /= nsam;
 	}
-	//write_offsets(offsets, nc);
+	write_offsets(offsets, nc);
 	//system("/usr/local/bin/web_diagnostics_ram");
 	for (int ic = 0; ic < nc; ++ic){
 	        if (ic >=8 && ic <= 10){
@@ -198,9 +203,11 @@ int getenv_default(const char* key, int def){
 
 #define SENS_DIV2ZERO	1e12		/* if we divided by this the int result will be zero */
 
-void read_cal(void)
+void read_cal(float* iq = 0)
 /* populate the SENS array, from previous cal */
 {
+
+
 	for (int ic = 0; ic < NCHANBUILD; ++ic){
 		SENS[ic] = SENS_DIV2ZERO;
 	}
@@ -217,16 +224,19 @@ void read_cal(void)
 		const char* status;
 		++ii;
 		if (sscanf(line, "%d %f %f %f %f", &ch, &sens, &tau, &i0, &q0) == 5){
-			if (ch >= 1 && ch <= NCHANBUILD){
-				SENS[ch-1] = sens;
-				//fprintf(stderr, "%2d: %.5e OK\n", ch, sens);
+			int ch0 = ch - 1;
+			if (ch0 >= 0 && ch0 < NCHANBUILD){
+				SENS[ch0] = sens;
+				if (iq){
+					iq[ch0*2+RE] = i0;
+					iq[ch0*2+IM] = q0;
+				}
 			}else{
 				status = "ERR ch";
 			}
 		}else{
 			status = "ERR conv";
 		}
-		//fprintf(stderr, "%d:%s:%s", ii, status, line);
 	}
 
 	fclose(fp);
@@ -254,9 +264,20 @@ int main(int argc, char* argv[])
 			G_active_chan.push_back(ch);
 		}
 	}
-	read_cal();
-	//zero_offsets();
+	bool check_offsets = getenv_default("B8_RT_CALC_CHECK_OFFSETS", 0);
 
+
+	if (check_offsets){
+		float* iq = new float[NCHANBUILD*2];
+
+		read_cal(iq);
+		write_offsets(iq, nc);
+
+		delete [] iq;
+	}else{
+		read_cal();
+	}
+	zero_offsets();
 
 	int ub;
 
