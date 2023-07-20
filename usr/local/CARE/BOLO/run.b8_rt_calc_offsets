@@ -1,0 +1,26 @@
+#!/bin/sh
+
+CARE=/usr/local/CARE/BOLO
+ULB=/usr/local/bin
+PIDF=/tmp/b8_rt_calc_offsets.pid
+LOG=/var/log/b8_rt_calc_offsets.log
+
+if [ "x$1" = "xinstall" ]; then
+
+	if [ ! -e $LOG ]; then                            
+        	grep -q emlog /proc/modules; 
+		[ $? -ne 0 ] && /sbin/insmod /usr/local/lib/modules/emlog.ko
+        	[ -e $LOG ] || mkemlog $LOG 16                                                           
+	fi   	
+	cp ${CARE}/run.b8_rt_calc_offsets /etc/sysconfig/acq400_streamd.0.init
+	exit 0
+fi
+
+if [ -e $PIDF ]; then
+	kill -9 $(cat $PIDF)
+fi
+
+$ULB/b8_rt_calc_offsets < /dev/acq400.0.bq 2>&1 >$LOG &
+echo $! > $PIDF
+
+

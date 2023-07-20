@@ -1,0 +1,1 @@
+make.zynq CXXFLAGS=-O3 b8_rt_calc_offsets
