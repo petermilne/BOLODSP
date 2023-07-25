@@ -1,0 +1,2 @@
+dd if=/dev/dsp1.3 bs=768 count=1 2>/dev/null | hexdump -ve '"%10_ad:" 4/4 "%10d " "\n"'
+

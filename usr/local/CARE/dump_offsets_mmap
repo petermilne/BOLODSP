@@ -1,0 +1,2 @@
+mmap -f /dev/dsp1.3 -l 768 | hexdump -ve '"%10_ad:" 4/4 "%08x " "\n"'
+
