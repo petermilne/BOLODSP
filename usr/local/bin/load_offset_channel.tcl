@@ -16,8 +16,6 @@ if { $argc < 4 } {
 # Why 48? MAX 6 x BOLO8 = 48 channels in one box. One size fits all..
 
 set MAXCHAN 48
-#set KCORDIC 1.1644353
-set KCORDIC 1
 
 proc read_bin {fn bdat} {
 	upvar $bdat _bdat
@@ -35,7 +33,7 @@ proc write_bin {fn bdat} {
 
 proc read_knob {knob} {
 	set fd [ open $knob r ]
-	set kv [ read $fd ]
+	set kv [ string trim [ read $fd ] ]
 	close $fd
 	return $kv
 }
@@ -47,9 +45,16 @@ proc get_vgain {site physchan} {
 	# amount of time.
 	set a0 [read_knob /dev/bolo8/${site}/ADC_${physchan}_A0 ]
 	set a1 [read_knob /dev/bolo8/${site}/ADC_${physchan}_A1 ]
-	set vg [ expr { 10.0 / (1 << (($a1<<1) + $a0)) } ]
-	set fudge [expr $vg / 2 ]
-	return $fudge
+	set vg [ expr { 10.0 / 2**"0b${a1}${a0}" } ]
+	return $vg
+}
+
+proc get_excite_scale {} {
+	set dac_excite_amp_knob [ read_knob /etc/acq400/14/DAC_EXCITE_AMP ]
+	set excite_lut [ dict create 3 18.0 2 15.0 1 9.0 0 1.0 ];  # From wavegen.vhd
+	set excite_amp [ dict get $excite_lut $dac_excite_amp_knob ]
+	set scale [ expr { 20.0 / $excite_amp } ]
+	return $scale
 }
 
 set ch [ lindex $argv 0 ]
@@ -68,12 +73,16 @@ set site [ expr {int($ch0 / 8) + 1} ]
 set physchan [ expr {int($ch0 % 8) + 1} ]
 
 set vgain [ get_vgain $site $physchan ]
+set excscale [ get_excite_scale ]
 
-set scale [ expr { $vgain*20/(18*2**24*$KCORDIC) } ]
+# Note, I and Q scales use 2**25 rather than 2**24 like A because
+# the offset correction works on I=A/2 cos(phi) and Q=-A/2 sin(phi).
+set scale [ expr { $vgain*$excscale/2**25 } ]
 set i0_int [ expr { int($i0/$scale) } ]
 set q0_int [ expr { int($q0/$scale) } ]
 
-set pscale [ expr { $vgain*20/(18*2**18*$KCORDIC) } ]
+# Ditto with power: use 2**19 instead of 2**18.
+set pscale [ expr { $vgain*$excscale/2**19 } ]
 set pi0_int [ expr { $sens == 0 ? 0 : int(($i0/$sens)/$pscale) } ]
 set pq0_int [ expr { $sens == 0 ? 0 : int(($q0/$sens)/$pscale) } ]
 # Replace the I0, Q0, PI0 and PQ0 elements of the offsets
