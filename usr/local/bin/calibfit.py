@@ -375,9 +375,12 @@ def main():
             calibrations.append(calibrate_single_channel(ch, options))
 
     if not options.terse:
-        print("Channel   Sens      Tau       Ioff          Qoff")
+        # String formatting used to match whitespace padding of column headings.
+        # One extra pad on channel so the rest line up on the first digit, not
+        # on the sign column.
+        print(f"{'Channel':11}{'Sens':14}{'Tau':14}{'Ioff':15}{'Qoff':15}")
     for channel, (sens, tau, ioff, qoff) in zip(options.channels, calibrations):
-        print(f"{channel: <10d}{sens: <14.5g}{tau: <14.5g}{ioff: <14.8g}{qoff: <14.8g}")
+        print(f"{channel: <10d}{sens: < 14.5g}{tau: < 14.5g}{ioff: < 15.8g}{qoff: < 15.8g}")
 
 
 if __name__ == "__main__":
