@@ -113,9 +113,15 @@ set.fdrive 20000
 /usr/local/bin/monitor_dsp1 2>&1 >/dev/null  &
 
 # automation wrapper calibration svc at 0xb010
-echo "bolodspcal 45072/tcp" >> /etc/services
+cat - >>/etc/services <<EOF
+bolodspcal 45072/tcp
+bolodspcal1 45073/tcp
+bolodspcal2 45074/tcp
+EOF
 cat - >/etc/inetd.bolo.conf <<EOF
 45072 stream tcp nowait root run_calibfit run_calibfit
+45073 stream tcp nowait root run_calibfit run_calibfit 1
+45074 stream tcp nowait root run_calibfit run_calibfit 2
 EOF
 
 mkdir -p /etc/epics.d
