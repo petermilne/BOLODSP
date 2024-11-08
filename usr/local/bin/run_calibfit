@@ -5,7 +5,12 @@
 export PATH=$PATH:/usr/local/bin/
 
 
+rv() {
+        [ "$BOLO_VERBOSE" -eq 1 ] && echo "$@"
+        "$@"
+}
 
+run_calibfit0() {
 if [ ! -e /mnt/local/sysconfig/bolo.sh ]; then
 cat - >/mnt/local/sysconfig/bolo.sh <<EOF
 BOLO_ACTIVE_CHAN="1 2 3 4 5 6 7 8"
@@ -25,13 +30,14 @@ BOLO_LOAD_OFFSETS=1
 BOLO_GAIN=1V2
 EOF
 fi
-. /mnt/local/sysconfig/bolo.sh
+source /mnt/local/sysconfig/bolo.sh
+
 
 if [ -e /etc/acq400/14/BOLO_ACTIVE_CHAN ]; then
-	bac=$(cat /etc/acq400/14/BOLO_ACTIVE_CHAN)
-	if [ ! -z $bac ] && [ "$bac" != "default" ]; then
-		BOLO_ACTIVE_CHAN=$(echo $bac | tr , \  )
-	fi
+        bac=$(cat /etc/acq400/14/BOLO_ACTIVE_CHAN)
+        if [ ! -z $bac ] && [ "$bac" != "default" ]; then
+                BOLO_ACTIVE_CHAN=$(echo $bac | tr , \  )
+        fi
 fi
 
 # Don't do anything if calibration is not enabled.
@@ -60,6 +66,10 @@ case "$BOLO_GAIN" in
         exit 1
         ;;
 esac
+}
+
+
+run_calibfit1() {
 
 reset.dsp
 
@@ -71,11 +81,6 @@ reset.dsp
 rm -f /tmp/calibfit.log
 
 [ -n "$CALIBFITARGS" ] && echo "custom CALIBFITARGS $CALIBFITARGS"
-
-rv() {
-        [ "$BOLO_VERBOSE" -eq 1 ] && echo "$@"
-        "$@"
-}
 
 
 set_gains_reset_os_dacs() {
@@ -116,6 +121,12 @@ orig_trg=$(get.site 1 trg | cut -d' ' -f1)
 set.site 1 trg=1,1,1
 orig_transient=$(set.site 0 transient)
 set.site 0 "transient POST=$post SOFT_TRIGGER=0; set_arm"
+
+cat - >/tmp/bolo_cal_transient_stash <<EOF
+orig_trg="$orig_trg"
+orig_transient="$orig_transient"
+EOF
+
 wait_until_state 1
 
 bolo_calibration
@@ -125,7 +136,10 @@ export CALIBFIT_EXCITEV
 
 time -f "calibfit took %E" /usr/local/bin/calibfit.py -t -n "$nsamples" -g "$BOLO_GAIN" $CALIBFITARGS $BOLO_ACTIVE_CHAN > /tmp/calibfit.log
 [ $BOLO_VERBOSE -eq 1 ] && cat /tmp/calibfit.log
+echo "run_calibfit1 99"
+} # run_calibfit1
 
+run_calibfit15() {
 # Copy calib data so it doesn't get overwritten
 if [ "$COPY_CALIB_DATA" -eq 1 ]
 then
@@ -145,20 +159,26 @@ then
         done
     done
 fi
+echo "run_calibfit15 99"
+}
 
-if [ "$LOAD_POWER_FILTERS" -eq 1 ]; then
-    nchan=$(get.site 0 NCHAN)
 
+run_calibfit2() {
+
+if [ ! -z $LOAD_POWER_FILTERS ] && [ $LOAD_POWER_FILTERS -eq 1 ] && [ -z $EXTERNAL_POWER_FILTER_CALC ]; then
     while read -r ch sens tau ioff qoff
     do
         rv power_filter_design.tcl "$ch" "$sens" "$tau"
     done < /tmp/calibfit.log
+fi
 
+if [ ! -z $LOAD_POWER_FILTERS ] && [ $LOAD_POWER_FILTERS -eq 1 ]; then
+    nchan=$(get.site 0 NCHAN)
     # Start running data through the filters so we can load multiple power filters
     set.site 0 transient PRE=1000 SOFT_TRIGGER=1
     set.site 0 set_arm
     wait_until_state 2
-    
+
     for ch in $(seq 1 $nchan) ; do
         if [ -e /tmp/power_filter${ch} ]; then
             pff=/tmp/power_filter${ch}            
@@ -170,13 +190,13 @@ if [ "$LOAD_POWER_FILTERS" -eq 1 ]; then
     set.site 0 set_abort
 fi
 
-if [ "$BOLO_LOAD_OFFSETS" -ge 1 ]; then
+if [ ! -z $BOLO_LOAD_OFFSETS ] && [ $BOLO_LOAD_OFFSETS -ge 1 ]; then
     while read -r ch sens tau ioff qoff
     do
         rv load_offset_channel.tcl "$ch" "$ioff" "$qoff" "$sens"
     done < /tmp/calibfit.log
     
-    if [ "$BOLO_LOAD_OFFSETS" -ge 2 ]; then
+    if [ $BOLO_LOAD_OFFSETS -ge 2 ]; then
         export BOLO_LOAD_OFFSETS
         b8_rt_calc_offsets 2>/tmp/b8_rt_calc_offsets.log </dev/acq400.0.bq &        # one cal, one cap
     fi 
@@ -184,14 +204,43 @@ fi
 
 reset.dsp
 
+if [ -e /tmp/bolo_cal_transient_stash ]; then
+        source /tmp/bolo_cal_transient_stash
+        echo "restoring $orig_trg $orig_transient"
 # Restore previous triggering and transient setup.
-set.site 1 "$orig_trg"
-set.site 0 transient "$orig_transient"
+        set.site 1 "$orig_trg"
+        set.site 0 transient "$orig_transient"
+else
+        echo "WARNING:  /tmp/bolo_cal_transient_stash not found"
+fi
 
 /usr/local/bin/web_diagnostics_cal
 /usr/local/bin/web_diagnostics_ram
-
-
-
 caput $(hostname):B8:CALIBRATING 0
+echo "run_calibfit2 99"
+} # run_calibfit2
+
+
+# Execution starts here.
+
+run_calibfit0
+
+if [ -z $1 ]; then
+        run_calibfit1
+        run_calibfit15
+        run_calibfit2
+else
+        for arg in $*; do
+                case $arg in
+                1)
+                       run_calibfit1;;
+                15)
+                       run_calibfit15;;
+                2)
+                       run_calibfit2;;
+                *)
+                        echo "ERROR: arg must be 1 or 2";;
+                esac
+        done
+fi
 echo "END"
