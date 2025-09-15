@@ -1,5 +1,7 @@
 BOLODSP:
 
+# ARCHIVED. Current version is at: https://github.com/D-TACQ/BOLODSP
+
 DSP automation routines for BOLO8.
 All math courtesy of Jack Lovell.
 Test and customer support: Sean Alsop  info@d-tacq.com
